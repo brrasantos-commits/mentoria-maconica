@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import text
 
 from pitch_app.admin_routes import router as admin_router
-from pitch_app.db import init_db, SessionLocal
+from pitch_app.db import init_db, SessionLocal, migrate_db
 from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
