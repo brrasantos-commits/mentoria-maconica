@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Estudo | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section>
+  <div>
+    <h2>Materiais de estudo</h2>
+    <p>Selecione um material para visualizar o conteúdo disponível.</p>
+  </div>
+
+  {% if materials %}
+  <div class="materials-grid">
+    {% for material in materials %}
+    <article class="material-card">
+      <div class="material-head">
+        <span class="material-badge">{{ material.type|upper }}</span>
+      </div>
+      <h3>{{ material.title }}</h3>
+      <p>Arquivo: {{ material.filename }}</p>
+      <a class="primary-btn" href="/estudo/{{ material.slug }}">Abrir</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p>Nenhum material disponível no momento.</p>
+  {% endif %}
+</section>
+{% endblock %}

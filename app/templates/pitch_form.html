@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Pitch | Sales Pitch AI{% endblock %}
+{% block content %}
+<section>
+  <h2>Etapa 2 — Envio do vídeo</h2>
+  <p>Os materiais abaixo foram selecionados na etapa de estudo.</p>
+  {% if materials %}
+    <ul>
+      {% for material in materials %}<li>{{ material.title }}</li>{% endfor %}
+    </ul>
+  {% else %}
+    <p>Nenhum material foi selecionado. Volte para a etapa de estudo.</p>
+  {% endif %}
+  <form action="/analyze" method="post" enctype="multipart/form-data">
+    <label for="seller_name">Nome do vendedor</label>
+    <input id="seller_name" name="seller_name" type="text" placeholder="Digite o nome" required>
+    <label for="video">Vídeo do pitch</label>
+    <input id="video" name="video" type="file" accept="video/*" required>
+    <button type="submit">Enviar para análise</button>
+  </form>
+</section>
+{% endblock %}

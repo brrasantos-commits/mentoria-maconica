@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultado da Análise</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-soft: #eef2ff;
+      --line: #e5e7eb;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --pass: #16a34a;
+      --fail: #dc2626;
+      --summary-bg: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px 40px;
+      background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .hero, section {
+      background: var(--card);
+      border: 1px solid rgba(229, 231, 235, 0.8);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .pill {
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .pill strong {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 22px;
+      align-items: flex-end;
+    }
+
+    .metric {
+      min-width: 160px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--primary-soft);
+      border: 1px solid #dbe4ff;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .score {
+      font-size: 54px;
+      line-height: 1;
+      font-weight: 800;
+      color: #2563eb;
+      letter-spacing: -0.04em;
+    }
+
+    .status {
+      font-size: 20px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .pass { color: var(--pass); }
+    .fail { color: var(--fail); }
+
+    section {
+      padding: 24px 28px;
+      margin-bottom: 18px;
+    }
+
+    section h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.7;
+      color: #374151;
+    }
+
+    .summary-box {
+      background: var(--summary-bg);
+      border: 1px solid #dbeafe;
+      border-left: 6px solid #3b82f6;
+      border-radius: 16px;
+      padding: 18px 18px 18px 20px;
+      line-height: 1.75;
+      color: #1f2937;
+    }
+
+    pre {
+      margin: 0;
+      padding: 18px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      white-space: pre-wrap;
+      overflow: auto;
+      line-height: 1.65;
+      color: #111827;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .note-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+    }
+
+    .note-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .note-title {
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .note-score {
+      font-weight: 800;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border: 1px solid #dbe4ff;
+      padding: 6px 10px;
+      border-radius: 999px;
+      min-width: 54px;
+      text-align: center;
+    }
+
+    .note-body {
+      color: #374151;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    li.simple-item {
+      margin: 0;
+      line-height: 1.55;
+      color: #374151;
+      padding-left: 2px;
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    a.btn {
+      display: inline-block;
+      padding: 11px 16px;
+      background: #4f46e5;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+      transition: transform .15s ease, background .15s ease;
+    }
+
+    a.btn:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 18px 12px 28px; }
+      .hero, section { padding: 20px; border-radius: 16px; }
+      h1 { font-size: 24px; }
+      .score { font-size: 44px; }
+      .meta-row { gap: 12px; }
+      .note-head { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Resultado da Análise</h1>
+      <p class="subtitle">Feedback do pitch com base nos materiais de treinamento enviados.</p>
+
+      <div class="grid">
+        <div class="pill"><strong>Vendedor</strong>{{ seller_name }}</div>
+        <div class="pill"><strong>Vídeo</strong>{{ video_name }}</div>
+        <div class="pill"><strong>Job ID</strong>{{ job_id }}</div>
+        <div class="pill"><strong>Tempo total</strong>{{ elapsed_seconds }}s</div>
+      </div>
+
+      <div class="meta-row">
+        <div class="metric">
+          <div class="metric-label">Nota final</div>
+          <div class="score">{{ final_score }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Status</div>
+          <div class="status {{ 'pass' if status == 'PASS' else 'fail' }}">{{ status }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Acurácia da IA</div>
+          <div class="status">{{ "%.2f"|format(ai_accuracy) }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <h2>Resumo</h2>
+      <div class="summary-box">{{ evaluation.summary }}</div>
+    </section>
+
+    <section>
+      <h2>Notas</h2>
+      <ul>
+        <li class="note-item">
+          <div class="note-head"><span class="note-title">Clareza</span><span class="note-score">{{ evaluation.scores.clareza.score }}</span></div>
+          <p class="note-body">{{ evaluation.scores.clareza.justification }}</p>
+        </li>
+        <li class="note-item">
+          <div class="note-head"><span class="note-title">Estrutura</span><span class="note-score">{{ evaluation.scores.estrutura.score }}</span></div>
+          <p class="note-body">{{ evaluation.scores.estrutura.justification }}</p>
+        </li>
+        <li class="note-item">
+          <div class="note-head"><span class="note-title">Argumentação</span><span class="note-score">{{ evaluation.scores.argumentacao.score }}</span></div>
+          <p class="note-body">{{ evaluation.scores.argumentacao.justification }}</p>
+        </li>
+        <li class="note-item">
+          <div class="note-head"><span class="note-title">Conexão</span><span class="note-score">{{ evaluation.scores.conexao.score }}</span></div>
+          <p class="note-body">{{ evaluation.scores.conexao.justification }}</p>
+        </li>
+        <li class="note-item">
+          <div class="note-head"><span class="note-title">CTA</span><span class="note-score">{{ evaluation.scores.cta.score }}</span></div>
+          <p class="note-body">{{ evaluation.scores.cta.justification }}</p>
+        </li>
+        <li class="note-item">
+          <div class="note-head"><span class="note-title">Fluidez</span><span class="note-score">{{ evaluation.scores.fluidez.score }}</span></div>
+          <p class="note-body">{{ evaluation.scores.fluidez.justification }}</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Pontos fortes</h2>
+      <ul>{% for item in evaluation.strengths %}<li class="simple-item">{{ item }}</li>{% endfor %}</ul>
+    </section>
+
+    <section>
+      <h2>Pontos de melhoria</h2>
+      <ul>{% for item in evaluation.improvements %}<li class="simple-item">{{ item }}</li>{% endfor %}</ul>
+    </section>
+
+    <section>
+      <h2>Corrigir primeiro</h2>
+      <ul>{% for item in evaluation.must_fix_first %}<li class="simple-item">{{ item }}</li>{% endfor %}</ul>
+    </section>
+
+    <section>
+      <h2>Pitch sugerido</h2>
+      <pre>{{ evaluation.improved_pitch }}</pre>
+    </section>
+
+    <section>
+      <h2>Transcrição</h2>
+      <pre>{{ transcript }}</pre>
+    </section>
+
+    <section>
+      <h2>Materiais analisados</h2>
+      <ul>{% for item in materials %}<li class="simple-item">{{ item }}</li>{% endfor %}</ul>
+      <div class="footer-actions">
+        <a class="btn" href="/">Voltar</a>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

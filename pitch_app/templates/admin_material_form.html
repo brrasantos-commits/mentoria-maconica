@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if material %}Editar Material{% else %}Novo Material{% endif %} | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>{% if material %}Editar material{% else %}Novo material{% endif %}</h2>
+      <p>Preencha os metadados com clareza para facilitar a filtragem, a recomendação e a seleção dos materiais nas etapas de estudo e pitch.</p>
+    </div>
+    <div class="hero-pill">{% if material %}Edição{% else %}Cadastro{% endif %}</div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:minmax(340px, 1fr) minmax(260px, 340px); gap:18px; align-items:start;">
+    <form method="post" action="{{ form_action }}" enctype="multipart/form-data" class="panel-card" style="display:grid; gap:16px;">
+      <div class="form-row">
+        <div>
+          <label for="title">Título</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value="{{ material.title if material else '' }}"
+            required
+            placeholder="Ex.: Battlecard Varejo HCI"
+          >
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="industry">Indústria</label>
+          <select id="industry" name="industry" required>
+            <option value="" disabled {% if not material %}selected{% endif %}>Selecione</option>
+            {% for option in industry_options %}
+              <option value="{{ option }}" {% if material and material.industry == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="solution">Solução</label>
+          <select id="solution" name="solution" required>
+            <option value="" disabled {% if not material %}selected{% endif %}>Selecione</option>
+            {% for option in solution_options %}
+              <option value="{{ option }}" {% if material and material.solution == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="description">Descrição</label>
+          <textarea
+            id="description"
+            name="description"
+            rows="5"
+            placeholder="Descreva brevemente o objetivo e o uso do material."
+          >{{ material.description if material else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="sort_order">Ordem de exibição</label>
+          <input
+            type="number"
+            id="sort_order"
+            name="sort_order"
+            value="{{ material.sort_order if material else 0 }}"
+            min="0"
+          >
+        </div>
+      </div>
+
+      {% if not material %}
+      <div class="form-row">
+        <div>
+          <label for="file">Arquivo</label>
+          <input type="file" id="file" name="file" accept=".pdf,.mp4,.webm,.mov,.avi,.mkv" required>
+        </div>
+      </div>
+      {% else %}
+        <div class="card-note">
+          <strong>Arquivo atual:</strong> {{ material.filename }}
+          <p style="margin:8px 0 0;">
+            Nesta edição, apenas os metadados são alterados. O arquivo físico não é substituído por esta tela.
+          </p>
+        </div>
+      {% endif %}
+
+      <div class="form-row">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" id="active" name="active" {% if not material or material.active %}checked{% endif %}>
+          <label for="active" style="margin-bottom:0;">Material ativo</label>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="primary-btn">Salvar</button>
+        <a class="secondary-btn" href="/admin/materials">Cancelar</a>
+      </div>
+    </form>
+
+    <div class="panel-card" style="display:grid; gap:14px;">
+      <div>
+        <h3 style="margin:0 0 8px; font-size:20px;">Orientações de cadastro</h3>
+        <p class="meta-note">
+          Um bom cadastro facilita a busca, a recomendação e a escolha dos materiais corretos durante a preparação do pitch.
+        </p>
+      </div>
+
+      <div class="card-note">
+        <strong>Boas práticas</strong>
+        <ul style="margin:10px 0 0; padding-left:18px; color:#475569; line-height:1.7;">
+          <li>Use títulos claros e objetivos</li>
+          <li>Classifique corretamente indústria e solução</li>
+          <li>Escreva descrições que ajudem o vendedor a entender o propósito do material</li>
+          <li>Use a ordem para destacar materiais mais importantes</li>
+          <li>Mantenha ativo apenas o que realmente deve aparecer para o usuário</li>
+        </ul>
+      </div>
+
+      <div class="card-note">
+        <strong>Impacto no app</strong>
+        <p style="margin:8px 0 0;">
+          Os metadados definidos aqui influenciam diretamente os filtros da tela de estudo e a experiência de seleção de materiais na tela de pitch.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

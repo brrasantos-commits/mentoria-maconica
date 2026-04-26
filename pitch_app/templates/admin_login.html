@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Login Admin | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Área administrativa</h2>
+      <p>Acesse o ambiente restrito para cadastrar, editar, organizar e remover materiais de estudo e apoio ao pitch.</p>
+    </div>
+    <div class="hero-pill">Acesso restrito</div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:minmax(320px, 460px) 1fr; gap:18px; align-items:start;">
+    <form method="post" action="/admin/login" class="panel-card" style="display:grid; gap:16px;">
+      <div>
+        <label for="username">Usuário</label>
+        <input type="text" id="username" name="username" autocomplete="username" required placeholder="Digite seu usuário">
+      </div>
+
+      <div>
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="Digite sua senha">
+      </div>
+
+      {% if error %}
+        <div class="card-note" style="border-color:#fecaca; background:#fef2f2; color:#991b1b;">
+          <strong>Falha no login:</strong> {{ error }}
+        </div>
+      {% endif %}
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="primary-btn">Entrar</button>
+        <a class="secondary-btn" href="/estudo">Voltar</a>
+      </div>
+    </form>
+
+    <div class="panel-card" style="display:grid; gap:14px;">
+      <div>
+        <h3 style="margin:0 0 8px; font-size:20px;">O que você faz aqui</h3>
+        <p class="meta-note">
+          Na área administrativa, você pode estruturar o catálogo de materiais que será exibido nas etapas de estudo e pitch.
+        </p>
+      </div>
+
+      <div class="card-note">
+        <strong>Principais ações disponíveis</strong>
+        <ul style="margin:10px 0 0; padding-left:18px; color:#475569; line-height:1.7;">
+          <li>Cadastrar novos materiais</li>
+          <li>Organizar por indústria e solução</li>
+          <li>Controlar a ordem de exibição</li>
+          <li>Ativar ou desativar materiais</li>
+          <li>Manter o acervo alinhado com o pitch ideal</li>
+        </ul>
+      </div>
+
+      <div class="card-note">
+        <strong>Boa prática</strong>
+        <p style="margin:8px 0 0;">
+          Use títulos claros, descrições objetivas e classificações corretas para facilitar a seleção dos materiais nas etapas de estudo e envio do pitch.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ material.title }} | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>{{ material.title }}</h2>
+      <p>Este material foi incluído automaticamente na sua seleção de apoio para o pitch.</p>
+    </div>
+    <div class="hero-pill">Salvo em sessão</div>
+  </div>
+
+  <div class="panel-card" style="display:grid; gap:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+      <div>
+        <p><strong>Arquivo:</strong> {{ material.filename }}</p>
+        {% if material.industry %}<p><strong>Indústria:</strong> {{ material.industry }}</p>{% endif %}
+        {% if material.solution %}<p><strong>Solução:</strong> {{ material.solution }}</p>{% endif %}
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="secondary-btn" id="toggleSelectionBtn">Selecionar / desselecionar</button>
+        <a class="primary-btn" href="/pitch">Ir para Pitch</a>
+      </div>
+    </div>
+
+    <div id="materialSelectionState" class="card-note"></div>
+
+    {% if material.type == 'pdf' %}
+      <iframe
+        src="{{ material.path }}"
+        style="width:100%; height:78vh; border:0; border-radius:14px; background:#fff;"
+      ></iframe>
+    {% elif material.type in ['mp4', 'webm', 'mov', 'avi', 'mkv'] %}
+      <video controls style="width:100%; max-height:78vh; border-radius:14px; background:#000;">
+        <source src="{{ material.path }}" type="video/mp4">
+        Seu navegador não suporta reprodução de vídeo.
+      </video>
+    {% else %}
+      <div class="card-note">Pré-visualização indisponível para este tipo de arquivo.</div>
+    {% endif %}
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="primary-btn" href="{{ material.path }}" target="_blank" rel="noopener">Abrir arquivo</a>
+      <a class="secondary-btn" href="/estudo">Voltar para estudo</a>
+      <a class="secondary-btn" href="/pitch">Continuar para pitch</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function refreshMaterialSelectionState() {
+    const box = document.getElementById("materialSelectionState");
+    if (!box) return;
+
+    if (isMaterialSelected('{{ material.filename }}')) {
+      box.innerHTML = "<strong>Selecionado:</strong> este material está salvo na sessão e será sugerido na etapa de pitch.";
+    } else {
+      box.innerHTML = "<strong>Não selecionado:</strong> este material não será enviado como apoio, a menos que você o selecione novamente.";
+    }
+  }
+
+  document.getElementById("toggleSelectionBtn")?.addEventListener("click", async () => {
+    await toggleSelectedMaterial('{{ material.filename }}', !isMaterialSelected('{{ material.filename }}'));
+  });
+
+  refreshMaterialSelectionState();
+  window.addEventListener("materials-updated", refreshMaterialSelectionState);
+</script>
+{% endblock %}

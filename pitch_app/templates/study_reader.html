@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ material.title }} | Leitor{% endblock %}
+
+{% block content %}
+<section style="gap: 16px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div>
+      <h2>{{ material.title }}</h2>
+      <p>Modo de leitura em tela cheia.</p>
+    </div>
+
+    <div style="display:flex; gap: 10px; flex-wrap:wrap;">
+      <a class="primary-btn" href="/estudo">Voltar</a>
+      <a class="primary-btn" href="/material/{{ material.id }}" target="_blank" rel="noopener">Abrir em nova guia</a>
+    </div>
+  </div>
+
+  <div class="reader-shell">
+    {% if material.file_type == 'pdf' %}
+      <iframe class="reader-frame" src="/material/{{ material.id }}" title="{{ material.title }}"></iframe>
+    {% else %}
+      <video class="reader-video" controls autoplay controlsList="nodownload" oncontextmenu="return false;">
+        <source src="/material/{{ material.id }}" type="video/{{ material.file_type }}">
+      </video>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

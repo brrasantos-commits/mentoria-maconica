@@ -1,0 +1,83 @@
+[
+  {
+    "filename": "INDUSTRIAL_HCI_(FusionCube)_Battlecard.mp4",
+    "title": "Industrial Hci (Fusioncube) Battlecard",
+    "industry": "Indústrial",
+    "solution": "FusionCube",
+    "kind": "video",
+    "type": "mp4",
+    "sort": 1
+  },
+  {
+    "filename": "INDUSTRIAL_HCI_(FusionCube)_Battlecard.pdf",
+    "title": "Industrial Hci (Fusioncube) Battlecard",
+    "industry": "Indústrial",
+    "solution": "FusionCube",
+    "kind": "pdf",
+    "type": "pdf",
+    "sort": 2
+  },
+  {
+    "filename": "INDUSTRIAL_HCI_(FusionCube)_Battlecard_slides.pdf",
+    "title": "Industrial Hci (Fusioncube) Battlecard Slides",
+    "industry": "Indústria",
+    "solution": "FusionCube",
+    "kind": "pdf",
+    "type": "pdf",
+    "sort": 3
+  },
+  {
+    "filename": "SAÚDE_HCI_(FusionCube)_Battlecard slides.pdf",
+    "title": "Saúde Hci (Fusioncube) Battlecard Slides",
+    "industry": "Saúde",
+    "solution": "FusionCube",
+    "kind": "pdf",
+    "type": "pdf",
+    "sort": 4
+  },
+  {
+    "filename": "SAÚDE_HCI_(FusionCube)_Battlecard.mp4",
+    "title": "Saúde Hci (Fusioncube) Battlecard",
+    "industry": "Saúde",
+    "solution": "FusionCube",
+    "kind": "video",
+    "type": "mp4",
+    "sort": 5
+  },
+  {
+    "filename": "SAÚDE_HCI_(FusionCube)_Battlecard.pdf",
+    "title": "Saúde Hci (Fusioncube) Battlecard",
+    "industry": "Saúde",
+    "solution": "FusionCube",
+    "kind": "pdf",
+    "type": "pdf",
+    "sort": 6
+  },
+  {
+    "filename": "VAREJO_HCI_(FusionCube)_Battlecard.mp4",
+    "title": "Varejo Hci (Fusioncube) Battlecard",
+    "industry": "Varejo",
+    "solution": "FusionCube",
+    "kind": "video",
+    "type": "mp4",
+    "sort": 7
+  },
+  {
+    "filename": "VAREJO_HCI_(FusionCube)_Battlecard.pdf",
+    "title": "Varejo Hci (Fusioncube) Battlecard",
+    "industry": "Varejo",
+    "solution": "FusionCube",
+    "kind": "pdf",
+    "type": "pdf",
+    "sort": 8
+  },
+  {
+    "filename": "VAREJO_HCI_(FusionCube)_Battlecard_slides.pdf",
+    "title": "Varejo Hci (Fusioncube) Battlecard Slides",
+    "industry": "Varejo",
+    "solution": "FusionCube",
+    "kind": "pdf",
+    "type": "pdf",
+    "sort": 9
+  }
+]

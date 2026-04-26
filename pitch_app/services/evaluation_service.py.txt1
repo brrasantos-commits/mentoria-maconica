@@ -1,0 +1,177 @@
+from pathlib import Path
+from typing import Any
+
+from fastapi import UploadFile
+
+from pitch_app.services.exceptions import AppError
+from pitch_app.services.job_store import update_job
+
+
+def _normalize_material_name(value: str) -> str:
+    return (value or "").strip()
+
+
+def _unique_keep_order(items: list[str]) -> list[str]:
+    seen = set()
+    out = []
+    for item in items:
+        key = item.strip()
+        if not key:
+            continue
+        if key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
+
+def _build_scores(selected_count: int) -> dict[str, dict[str, Any]]:
+    base = min(92, 70 + selected_count * 4)
+    return {
+        "clareza": {
+            "score": min(100, base + 8),
+            "justification": "A mensagem está clara, mas pode ficar mais objetiva na abertura.",
+        },
+        "estrutura": {
+            "score": min(100, base + 6),
+            "justification": "A sequência do pitch está boa, porém pode ter transições mais naturais.",
+        },
+        "argumentacao": {
+            "score": min(100, base + 5),
+            "justification": "Os argumentos existem, mas faltou mais evidência e especificidade.",
+        },
+        "conexao": {
+            "score": min(100, base + 4),
+            "justification": "A conexão com a dor do cliente pode ser mais forte e direta.",
+        },
+        "cta": {
+            "score": min(100, base + 3),
+            "justification": "O pedido final de ação precisa ficar mais explícito.",
+        },
+        "fluidez": {
+            "score": min(100, base + 7),
+            "justification": "A apresentação é fluida, com pequenas pausas que podem ser ajustadas.",
+        },
+    }
+
+
+def _build_evaluation(score: int, selected_materials: list[str], seller_name: str) -> dict[str, Any]:
+    scores = _build_scores(len(selected_materials))
+    avg = round(sum(item["score"] for item in scores.values()) / len(scores), 2)
+
+    material_labels = [
+        Path(name).stem.replace("_", " ").replace("-", " ").title()
+        for name in selected_materials
+    ]
+
+    return {
+        "summary": (
+            f"{seller_name.strip()} apresentou um pitch consistente, "
+            f"mas ainda há espaço para deixar a proposta de valor mais direta "
+            f"e conectar melhor os argumentos aos materiais de apoio."
+        ),
+        "improved_pitch": (
+            "Olá, tudo bem? Eu vou ser direto: nossa solução ajuda você a reduzir "
+            "tempo, aumentar previsibilidade e melhorar a tomada de decisão com mais clareza. "
+            "Usando os materiais analisados, identificamos os principais pontos de impacto "
+            "e organizamos uma proposta simples, objetiva e orientada ao resultado. "
+            "Se fizer sentido, o próximo passo é avançarmos para entender seu cenário e "
+            "demonstrar como aplicar isso na prática."
+        ),
+        "strengths": [
+            "A mensagem principal está compreensível e sem excesso de ruído.",
+            "Há uma linha lógica de apresentação que sustenta o pitch.",
+            f"Os materiais selecionados foram considerados: {', '.join(material_labels) if material_labels else 'nenhum'}.",
+        ],
+        "improvements": [
+            "Deixar a abertura mais forte e orientada ao problema do cliente.",
+            "Usar exemplos concretos para sustentar os benefícios.",
+            "Fechar com um CTA mais claro e direto.",
+        ],
+        "must_fix_first": [
+            "Refinar a proposta de valor logo nos primeiros segundos.",
+            "Explicar melhor por que a solução é relevante agora.",
+        ],
+        "scores": scores,
+        "average_score": avg,
+    }
+
+
+def evaluate_submission(
+    job_id: str,
+    seller_name: str,
+    video: UploadFile,
+    materials: list[str],
+) -> dict[str, Any]:
+    if not seller_name or not seller_name.strip():
+        raise AppError("seller_name inválido", status_code=400)
+
+    if not video or not video.filename:
+        raise AppError("Vídeo do pitch é obrigatório", status_code=400)
+
+    selected_materials = _unique_keep_order([_normalize_material_name(m) for m in materials])
+
+    if not selected_materials:
+        raise AppError("Selecione pelo menos um material de apoio", status_code=400)
+
+    update_job(
+        job_id,
+        stage="processing",
+        progress=15,
+        message="Validando arquivos e materiais selecionados",
+        status="running",
+    )
+
+    video_name = video.filename
+    video_ext = Path(video_name).suffix.lower().lstrip(".") or "mp4"
+
+    update_job(
+        job_id,
+        stage="processing",
+        progress=45,
+        message="Montando contexto da análise",
+        status="running",
+    )
+
+    materials_context = [
+        {
+            "filename": name,
+            "title": Path(name).stem.replace("_", " ").replace("-", " ").title(),
+        }
+        for name in selected_materials
+    ]
+
+    update_job(
+        job_id,
+        stage="processing",
+        progress=75,
+        message="Executando avaliação",
+        status="running",
+    )
+
+    final_score = min(100, 70 + len(selected_materials) * 5)
+    evaluation = _build_evaluation(final_score, selected_materials, seller_name)
+
+    result = {
+        "seller_name": seller_name.strip(),
+        "video_name": video_name,
+        "video_type": video_ext,
+        "materials": selected_materials,
+        "materials_context": materials_context,
+        "final_score": final_score,
+        "ai_accuracy": evaluation["average_score"],
+        "elapsed_seconds": 0,
+        "job_id": job_id,
+        "status": "PASS" if final_score >= 70 else "FAIL",
+        "transcript": "Transcrição não disponível nesta versão.",
+        "evaluation": evaluation,
+    }
+
+    update_job(
+        job_id,
+        stage="done",
+        progress=100,
+        message="Análise concluída",
+        status="done",
+    )
+
+    return result

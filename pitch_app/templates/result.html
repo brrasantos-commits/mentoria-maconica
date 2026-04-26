@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultado da Análise</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-soft: #eef2ff;
+      --line: #e5e7eb;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --pass: #16a34a;
+      --fail: #dc2626;
+      --summary-bg: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px 40px;
+      background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    .hero, section {
+      background: var(--card);
+      border: 1px solid rgba(229, 231, 235, 0.8);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .pill {
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      min-width: 0;
+    }
+
+    .pill strong {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .pill-value {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .job-id {
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 22px;
+      align-items: flex-end;
+    }
+
+    .metric {
+      min-width: 180px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--primary-soft);
+      border: 1px solid #dbe4ff;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .score {
+      font-size: 54px;
+      line-height: 1;
+      font-weight: 800;
+      color: #2563eb;
+      letter-spacing: -0.04em;
+    }
+
+    .status {
+      font-size: 20px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .pass { color: var(--pass); }
+    .fail { color: var(--fail); }
+
+    section {
+      padding: 24px 28px;
+      margin-bottom: 18px;
+    }
+
+    section h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.7;
+      color: #374151;
+    }
+
+    .summary-box {
+      background: var(--summary-bg);
+      border: 1px solid #dbeafe;
+      border-left: 6px solid #3b82f6;
+      border-radius: 16px;
+      padding: 18px 18px 18px 20px;
+      line-height: 1.75;
+      color: #1f2937;
+    }
+
+    pre {
+      margin: 0;
+      padding: 18px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      white-space: pre-wrap;
+      overflow: auto;
+      line-height: 1.65;
+      color: #111827;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .note-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+    }
+
+    .note-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .note-title {
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .note-score {
+      font-weight: 800;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border: 1px solid #dbe4ff;
+      padding: 6px 10px;
+      border-radius: 999px;
+      min-width: 54px;
+      text-align: center;
+    }
+
+    .note-body {
+      color: #374151;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .evidence-list {
+      margin-top: 10px;
+      padding-left: 18px;
+      color: #4b5563;
+      display: block;
+      list-style: disc;
+    }
+
+    .evidence-list li {
+      margin: 4px 0;
+      line-height: 1.5;
+    }
+
+    li.simple-item {
+      margin: 0;
+      line-height: 1.55;
+      color: #374151;
+      padding-left: 2px;
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    a.btn {
+      display: inline-block;
+      padding: 11px 16px;
+      background: #4f46e5;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+      transition: transform .15s ease, background .15s ease;
+    }
+
+    a.btn:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
+    }
+
+    .material-sublist {
+      margin-top: 8px;
+      padding-left: 18px;
+      list-style: disc;
+      color: #4b5563;
+      display: block;
+    }
+
+    .material-sublist li {
+      margin: 4px 0;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 18px 12px 28px; }
+      .hero, section { padding: 20px; border-radius: 16px; }
+      h1 { font-size: 24px; }
+      .score { font-size: 44px; }
+      .meta-row { gap: 12px; }
+      .note-head { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  {% set e = evaluation or {} %}
+  {% set scores = e.get('scores', {}) if e else {} %}
+  {% set adv = e.get('advanced_criteria', {}) if e else {} %}
+
+  {% set clareza = scores.get('clareza', {}) %}
+  {% set estrutura = scores.get('estrutura', {}) %}
+  {% set argumentacao = scores.get('argumentacao', {}) %}
+  {% set conexao = scores.get('conexao', {}) %}
+  {% set cta = scores.get('cta', {}) %}
+  {% set fluidez = scores.get('fluidez', {}) %}
+
+  {% set strengths = e.get('strengths', []) if e else [] %}
+  {% set improvements = e.get('improvements', []) if e else [] %}
+  {% set must_fix_first = e.get('must_fix_first', []) if e else [] %}
+  {% set materials_list = materials_context or materials or [] %}
+  {% set material_adherence = e.get('material_adherence', {}) if e else {} %}
+
+  <div class="wrap">
+    <div class="hero">
+      <h1>Resultado da Análise</h1>
+      <p class="subtitle">Feedback do pitch com base na transcrição, materiais selecionados e critérios avançados de avaliação.</p>
+
+      <div class="grid">
+        <div class="pill">
+          <strong>Vendedor</strong>
+          <span class="pill-value">{{ seller_name or '' }}</span>
+        </div>
+        <div class="pill">
+          <strong>Vídeo</strong>
+          <span class="pill-value">{{ video_name or '' }}</span>
+        </div>
+        <div class="pill">
+          <strong>Job ID</strong>
+          <span class="pill-value job-id" title="{{ job_id or '' }}">{{ job_id or '' }}</span>
+        </div>
+        <div class="pill">
+          <strong>Tempo total</strong>
+          <span class="pill-value">{{ elapsed_seconds or 0 }}s</span>
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <div class="metric">
+          <div class="metric-label">Nota final do pitch</div>
+          <div class="score">{{ final_score if final_score is not none else 0 }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Resultado</div>
+          <div class="status {{ 'pass' if status == 'PASS' else 'fail' }}">{{ status or '' }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Confiabilidade da análise</div>
+          <div class="status">{{ "%.2f"|format(analysis_confidence or 0) }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <h2>Resumo executivo</h2>
+      <div class="summary-box">{{ e.get('summary', '') }}</div>
+    </section>
+
+    <section>
+      <h2>Notas principais</h2>
+      <ul>
+        {% for label, item in [
+          ('Clareza', clareza),
+          ('Estrutura', estrutura),
+          ('Argumentação', argumentacao),
+          ('Conexão', conexao),
+          ('CTA', cta),
+          ('Fluidez', fluidez)
+        ] %}
+          <li class="note-item">
+            <div class="note-head">
+              <span class="note-title">{{ label }}</span>
+              <span class="note-score">{{ item.get('score', 0) if item else 0 }}</span>
+            </div>
+            <p class="note-body">{{ item.get('justification', '') if item else '' }}</p>
+            {% set evidences = item.get('evidence', []) if item else [] %}
+            {% if evidences %}
+              <ul class="evidence-list">
+                {% for ev in evidences %}
+                  <li>{{ ev }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Critérios avançados</h2>
+      <ul>
+        {% for key, label in [
+          ('elevator_pitch_missao_critica', 'Elevator pitch orientado à missão crítica'),
+          ('dores_da_industria', 'Dores da indústria'),
+          ('proposta_valor_diferenciais', 'Proposta de valor e diferenciais'),
+          ('features_principais', 'Features principais'),
+          ('servicos_tecnocomp', 'Serviços Tecnocomp'),
+          ('referencias_cases', 'Referências e cases'),
+          ('porque_tecnocomp', 'Porque Tecnocomp'),
+          ('proximos_passos', 'Próximos passos'),
+          ('frases_fechamento', 'Frases de fechamento')
+        ] %}
+          {% set item = adv.get(key, {}) %}
+          <li class="note-item">
+            <div class="note-head">
+              <span class="note-title">{{ label }}</span>
+              <span class="note-score">{{ item.get('score', 0) if item else 0 }}</span>
+            </div>
+            <p class="note-body">{{ item.get('justification', '') if item else '' }}</p>
+            {% set evidences = item.get('evidence', []) if item else [] %}
+            {% if evidences %}
+              <ul class="evidence-list">
+                {% for ev in evidences %}
+                  <li>{{ ev }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Aderência aos materiais</h2>
+      <ul>
+        {% for item in materials_list %}
+          {% if item is mapping %}
+            {% set filename = item.get('filename', '') %}
+            {% set title = item.get('title', filename) %}
+          {% else %}
+            {% set filename = item %}
+            {% set title = item %}
+          {% endif %}
+
+          {% set adherence = material_adherence.get(filename, {}) %}
+
+          <li class="note-item">
+            <div class="note-head">
+              <span class="note-title">{{ title }}{% if filename %} ({{ filename }}){% endif %}</span>
+              <span class="note-score">{{ adherence.get('score', 0) if adherence else 0 }}</span>
+            </div>
+
+            {% set covered = adherence.get('covered_points', []) if adherence else [] %}
+            {% set missing = adherence.get('missing_points', []) if adherence else [] %}
+            {% set gaps = adherence.get('critical_gaps', []) if adherence else [] %}
+            {% set evidence = adherence.get('evidence_from_pitch', []) if adherence else [] %}
+
+            {% if covered %}
+              <p class="note-body"><strong>Pontos cobertos:</strong></p>
+              <ul class="material-sublist">
+                {% for v in covered %}
+                  <li>{{ v }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if missing %}
+              <p class="note-body" style="margin-top:10px;"><strong>Pontos ausentes:</strong></p>
+              <ul class="material-sublist">
+                {% for v in missing %}
+                  <li>{{ v }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if gaps %}
+              <p class="note-body" style="margin-top:10px;"><strong>Gaps críticos:</strong></p>
+              <ul class="material-sublist">
+                {% for v in gaps %}
+                  <li>{{ v }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if evidence %}
+              <p class="note-body" style="margin-top:10px;"><strong>Evidências no pitch:</strong></p>
+              <ul class="material-sublist">
+                {% for v in evidence %}
+                  <li>{{ v }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Pontos fortes</h2>
+      <ul>
+        {% for item in strengths %}
+          <li class="simple-item">{{ item }}</li>
+        {% else %}
+          <li class="simple-item">Nenhum ponto forte destacado.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Pontos de melhoria</h2>
+      <ul>
+        {% for item in improvements %}
+          <li class="simple-item">{{ item }}</li>
+        {% else %}
+          <li class="simple-item">Nenhum ponto de melhoria destacado.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Corrigir primeiro</h2>
+      <ul>
+        {% for item in must_fix_first %}
+          <li class="simple-item">{{ item }}</li>
+        {% else %}
+          <li class="simple-item">Nenhuma prioridade crítica identificada.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Pitch sugerido</h2>
+      <pre>{{ e.get('improved_pitch', '') }}</pre>
+    </section>
+
+    <section>
+      <h2>Transcrição</h2>
+      <pre>{{ transcript or '' }}</pre>
+    </section>
+
+    <section>
+      <h2>Materiais analisados</h2>
+      <ul>
+        {% for item in materials_list %}
+          <li class="simple-item">
+            {% if item is mapping %}
+              {{ item.get('title', item) }}{% if item.get('filename') %} ({{ item.get('filename') }}){% endif %}
+            {% else %}
+              {{ item }}
+            {% endif %}
+          </li>
+        {% else %}
+          <li class="simple-item">Nenhum material listado.</li>
+        {% endfor %}
+      </ul>
+      <div class="footer-actions">
+        <a class="btn" href="/">Voltar</a>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

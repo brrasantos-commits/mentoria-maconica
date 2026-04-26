@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}Pitch | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Etapa 2 — Envio do pitch</h2>
+      <p>Revise os materiais estudados, filtre o que faz sentido para este pitch e envie o vídeo para análise.</p>
+    </div>
+    <div class="hero-pill">Seleção centralizada na sessão</div>
+  </div>
+
+  <form method="post" action="/analyze" enctype="multipart/form-data" class="panel-card" style="display:grid; gap:18px;">
+    <div class="form-row">
+      <div>
+        <label for="seller_name">Nome do vendedor</label>
+        <input type="text" id="seller_name" name="seller_name" required placeholder="Ex.: João Silva">
+      </div>
+
+      <div>
+        <label for="video">Vídeo do pitch</label>
+        <input type="file" id="video" name="video" accept="video/*" required>
+      </div>
+    </div>
+
+    <div class="panel-card" style="padding:16px;">
+      <div class="top-toolbar">
+        <div>
+          <strong>Materiais de apoio</strong>
+          <div class="hint">Os materiais abertos na etapa de estudo já aparecem marcados. Você pode ajustar a seleção final.</div>
+        </div>
+      </div>
+
+      <div class="filter-grid" style="margin-bottom:14px;">
+        <div>
+          <label for="pitchFilterIndustry">Filtrar por indústria</label>
+          <select id="pitchFilterIndustry">
+            <option value="all">Todas</option>
+            {% for option in industry_options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="pitchFilterSolution">Filtrar por solução</label>
+          <select id="pitchFilterSolution">
+            <option value="all">Todas</option>
+            {% for option in solution_options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="pitchSearch">Buscar material</label>
+          <input type="text" id="pitchSearch" placeholder="Buscar por título, arquivo, indústria ou solução">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <button type="button" class="secondary-btn" onclick="selectVisibleMaterials(true)">Selecionar filtrados</button>
+        <button type="button" class="secondary-btn" onclick="selectVisibleMaterials(false)">Desselecionar filtrados</button>
+        <button type="button" class="secondary-btn" onclick="clearSelectedMaterials()">Limpar tudo</button>
+      </div>
+
+      <div id="pitchSelectionSummary" class="selection-summary" style="margin-bottom:14px;"></div>
+
+      <div id="pitchMaterialsGrid" style="display:grid; gap:12px;">
+        {% for material in materials %}
+        <label
+          class="checkbox-card"
+          data-material-item
+          data-filename="{{ material.filename }}"
+          data-title="{{ material.title|lower }}"
+          data-industry="{{ (material.industry or '')|lower }}"
+          data-solution="{{ (material.solution or '')|lower }}"
+        >
+          <input
+            type="checkbox"
+            class="pitch-material-checkbox"
+            value="{{ material.filename }}"
+          >
+
+          <div class="checkbox-content">
+            <div class="material-head" style="margin-bottom:8px;">
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <span class="material-badge">{{ material.type|upper }}</span>
+                {% if material.industry %}
+                  <span class="material-badge" style="background:#ecfeff; color:#0f766e; border-color:#ccfbf1;">{{ material.industry }}</span>
+                {% endif %}
+                {% if material.solution %}
+                  <span class="material-badge" style="background:#fff7ed; color:#c2410c; border-color:#fed7aa;">{{ material.solution }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <h3>{{ material.title }}</h3>
+            <p class="file-name">{{ material.filename }}</p>
+
+            {% if material.description %}
+              <p class="meta-note" style="margin-top:8px;">{{ material.description }}</p>
+            {% else %}
+              <p class="meta-note" style="margin-top:8px;">Selecione este material para ser considerado na avaliação do pitch.</p>
+            {% endif %}
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+
+      <select id="materialsHiddenSelect" name="materials" multiple hidden required></select>
+    </div>
+
+    <div class="card-note">
+      Serão enviados para análise apenas os materiais efetivamente marcados acima.
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button type="submit" class="primary-btn">Enviar para análise</button>
+      <a class="secondary-btn" href="/estudo">Voltar ao estudo</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function syncHiddenMaterialsSelect() {
+    const hiddenSelect = document.getElementById("materialsHiddenSelect");
+    if (!hiddenSelect) return;
+
+    const selected = getSelectedMaterials();
+    hiddenSelect.innerHTML = "";
+
+    selected.forEach(filename => {
+      const opt = document.createElement("option");
+      opt.value = filename;
+      opt.text = filename;
+      opt.selected = true;
+      hiddenSelect.appendChild(opt);
+    });
+  }
+
+  function renderPitchSelectionSummary() {
+    const box = document.getElementById("pitchSelectionSummary");
+    if (!box) return;
+
+    const selected = getSelectedMaterials();
+    box.innerHTML = "";
+
+    if (!selected.length) {
+      box.innerHTML = '<span class="hint">Nenhum material selecionado. Marque pelo menos um material para análise.</span>';
+      return;
+    }
+
+    selected.forEach(filename => {
+      const chip = document.createElement("span");
+      chip.className = "selection-chip";
+      chip.innerHTML = `
+        <span>${filename}</span>
+        <button type="button" title="Remover">×</button>
+      `;
+      chip.querySelector("button").addEventListener("click", async () => {
+        await removeSelectedMaterial(filename);
+      });
+      box.appendChild(chip);
+    });
+  }
+
+  function syncPitchCheckboxes() {
+    document.querySelectorAll(".pitch-material-checkbox").forEach(checkbox => {
+      const checked = isMaterialSelected(checkbox.value);
+      checkbox.checked = checked;
+
+      const card = checkbox.closest(".checkbox-card");
+      if (card) {
+        card.classList.toggle("selected", checked);
+      }
+    });
+
+    syncHiddenMaterialsSelect();
+    renderPitchSelectionSummary();
+  }
+
+  function applyPitchFilters() {
+    const industry = (document.getElementById("pitchFilterIndustry")?.value || "all").toLowerCase();
+    const solution = (document.getElementById("pitchFilterSolution")?.value || "all").toLowerCase();
+    const search = (document.getElementById("pitchSearch")?.value || "").trim().toLowerCase();
+
+    document.querySelectorAll("[data-material-item]").forEach(item => {
+      const title = item.dataset.title || "";
+      const file = (item.dataset.filename || "").toLowerCase();
+      const itemIndustry = item.dataset.industry || "";
+      const itemSolution = item.dataset.solution || "";
+
+      const matchIndustry = industry === "all" || itemIndustry === industry;
+      const matchSolution = solution === "all" || itemSolution === solution;
+      const matchSearch =
+        !search ||
+        title.includes(search) ||
+        file.includes(search) ||
+        itemIndustry.includes(search) ||
+        itemSolution.includes(search);
+
+      item.style.display = (matchIndustry && matchSolution && matchSearch) ? "" : "none";
+    });
+  }
+
+  async function selectVisibleMaterials(checked) {
+    const current = new Set(getSelectedMaterials());
+
+    document.querySelectorAll("[data-material-item]").forEach(item => {
+      if (item.style.display === "none") return;
+      const checkbox = item.querySelector(".pitch-material-checkbox");
+      if (!checkbox) return;
+
+      if (checked) current.add(checkbox.value);
+      else current.delete(checkbox.value);
+    });
+
+    await setSelectedMaterials([...current]);
+  }
+
+  document.querySelectorAll(".pitch-material-checkbox").forEach(checkbox => {
+    checkbox.addEventListener("change", async () => {
+      await toggleSelectedMaterial(checkbox.value, checkbox.checked);
+    });
+  });
+
+  document.getElementById("pitchFilterIndustry")?.addEventListener("change", applyPitchFilters);
+  document.getElementById("pitchFilterSolution")?.addEventListener("change", applyPitchFilters);
+  document.getElementById("pitchSearch")?.addEventListener("input", applyPitchFilters);
+
+  syncPitchCheckboxes();
+  applyPitchFilters();
+
+  window.addEventListener("materials-updated", () => {
+    syncPitchCheckboxes();
+  });
+</script>
+{% endblock %}

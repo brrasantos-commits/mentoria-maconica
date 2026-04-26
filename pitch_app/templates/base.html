@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Sales Pitch AI{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-strong: #4338ca;
+      --primary-soft: #eef2ff;
+      --line: #e5e7eb;
+      --danger: #dc2626;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(79,70,229,.08), transparent 28%),
+        linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 16px 40px;
+    }
+
+    .site-header {
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(229,231,235,.9);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 18px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 12px;
+      z-index: 20;
+      backdrop-filter: blur(12px);
+      margin-bottom: 22px;
+    }
+
+    .site-brand h1 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: -0.02em;
+    }
+
+    .site-brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .site-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-weight: 600;
+      transition: .18s ease;
+    }
+
+    .nav-link:hover {
+      transform: translateY(-1px);
+      border-color: #c7d2fe;
+      background: #fafbff;
+    }
+
+    .nav-link.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 8px 18px rgba(79,70,229,.22);
+    }
+
+    section.page-card {
+      background: var(--card);
+      border: 1px solid rgba(229,231,235,.85);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+      margin-bottom: 18px;
+    }
+
+    .hero-block {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .hero-block h2 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-block p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 780px;
+    }
+
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-soft);
+      color: var(--primary-strong);
+      border: 1px solid #dbe4ff;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .material-card,
+    .panel-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 18px rgba(15,23,42,.04);
+      padding: 18px;
+    }
+
+    .materials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 16px;
+    }
+
+    .material-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .material-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary-strong);
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid #dbe4ff;
+    }
+
+    .file-name {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+
+    .meta-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .primary-btn,
+    button.primary-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--primary);
+      color: #fff;
+      text-decoration: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .18s ease;
+      box-shadow: 0 8px 18px rgba(79,70,229,.18);
+    }
+
+    .primary-btn:hover,
+    button.primary-btn:hover {
+      background: var(--primary-strong);
+      transform: translateY(-1px);
+    }
+
+    .secondary-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff;
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .danger-btn {
+      background: var(--danger);
+    }
+
+    .filter-grid, .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: inline-block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    input[type="file"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    .card-note {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .selection-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .selection-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .selection-chip button {
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 700;
+      color: #64748b;
+      padding: 0;
+    }
+
+    .checkbox-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+      transition: .18s ease;
+    }
+
+    .checkbox-card.selected {
+      border-color: #818cf8;
+      background: #f5f7ff;
+      box-shadow: 0 10px 22px rgba(79,70,229,.10);
+    }
+
+    .checkbox-card input[type="checkbox"] {
+      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .checkbox-content {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .checkbox-content h3 {
+      margin: 0 0 6px;
+      font-size: 17px;
+    }
+
+    .top-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--muted);
+    }
+  </style>
+
+  <script>
+    let sessionMaterialsCache = {{ selected_materials | tojson if selected_materials is defined else '[]' }};
+
+    function dispatchMaterialsUpdate(items) {
+      window.dispatchEvent(new CustomEvent("materials-updated", { detail: items || [] }));
+    }
+
+    async function refreshSessionMaterials() {
+      const response = await fetch("/api/session/materials", { credentials: "same-origin" });
+      const data = await response.json();
+      sessionMaterialsCache = Array.isArray(data.materials) ? data.materials : [];
+      dispatchMaterialsUpdate(sessionMaterialsCache);
+      return sessionMaterialsCache;
+    }
+
+    function getSelectedMaterials() {
+      return Array.isArray(sessionMaterialsCache) ? sessionMaterialsCache : [];
+    }
+
+    function isMaterialSelected(filename) {
+      return getSelectedMaterials().includes(filename);
+    }
+
+    async function addSelectedMaterial(filename) {
+      const response = await fetch("/api/session/materials/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ filename })
+      });
+      const data = await response.json();
+      sessionMaterialsCache = Array.isArray(data.materials) ? data.materials : [];
+      dispatchMaterialsUpdate(sessionMaterialsCache);
+      return sessionMaterialsCache;
+    }
+
+    async function removeSelectedMaterial(filename) {
+      const response = await fetch("/api/session/materials/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ filename })
+      });
+      const data = await response.json();
+      sessionMaterialsCache = Array.isArray(data.materials) ? data.materials : [];
+      dispatchMaterialsUpdate(sessionMaterialsCache);
+      return sessionMaterialsCache;
+    }
+
+    async function setSelectedMaterials(items) {
+      const response = await fetch("/api/session/materials/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ materials: items || [] })
+      });
+      const data = await response.json();
+      sessionMaterialsCache = Array.isArray(data.materials) ? data.materials : [];
+      dispatchMaterialsUpdate(sessionMaterialsCache);
+      return sessionMaterialsCache;
+    }
+
+    async function clearSelectedMaterials() {
+      const response = await fetch("/api/session/materials/clear", {
+        method: "POST",
+        credentials: "same-origin"
+      });
+      const data = await response.json();
+      sessionMaterialsCache = Array.isArray(data.materials) ? data.materials : [];
+      dispatchMaterialsUpdate(sessionMaterialsCache);
+      return sessionMaterialsCache;
+    }
+
+    async function toggleSelectedMaterial(filename, checked) {
+      if (checked) return addSelectedMaterial(filename);
+      return removeSelectedMaterial(filename);
+    }
+  </script>
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <main class="container">
+    <header class="site-header">
+      <div class="site-brand">
+        <h1>Sales Pitch AI</h1>
+        <p>Treinamento comercial, estudo de materiais, envio de pitch e gestão administrativa.</p>
+      </div>
+
+      <nav class="site-nav">
+        <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">Estudo</a>
+        <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">Pitch</a>
+        <a class="nav-link {% if request.url.path.startswith('/admin') %}active{% endif %}" href="/admin/login">Admin</a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

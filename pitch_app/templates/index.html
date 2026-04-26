@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Estudo | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Etapa 1 — Estudo dos materiais</h2>
+      <p>Abra os materiais relevantes e monte automaticamente a base de apoio que seguirá para a etapa de pitch.</p>
+    </div>
+    <div class="hero-pill">Seleção salva na sessão</div>
+  </div>
+
+  <form method="get" action="/estudo" class="panel-card" style="display:grid; gap:14px; margin-bottom:18px;">
+    <div class="filter-grid">
+      <div>
+        <label for="industry">Indústria</label>
+        <select id="industry" name="industry">
+          <option value="all">Todas</option>
+          {% for option in industry_options %}
+            <option value="{{ option }}" {% if current_industry == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="solution">Solução</label>
+        <select id="solution" name="solution">
+          <option value="all">Todas</option>
+          {% for option in solution_options %}
+            <option value="{{ option }}" {% if current_solution == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button type="submit" class="primary-btn">Aplicar filtros</button>
+      <a class="secondary-btn" href="/estudo">Limpar</a>
+      <a class="secondary-btn" href="/pitch">Ir para Pitch</a>
+    </div>
+  </form>
+
+  <div class="panel-card" style="margin-bottom: 18px;">
+    <div class="top-toolbar">
+      <div>
+        <strong>Materiais selecionados para o pitch</strong>
+        <div class="hint">Ao abrir um material, ele é adicionado automaticamente nesta lista.</div>
+      </div>
+      <button type="button" class="secondary-btn" onclick="clearSelectedMaterials()">Limpar seleção</button>
+    </div>
+    <div id="studySelectionSummary" class="selection-summary"></div>
+  </div>
+
+  {% if materials %}
+    <div class="materials-grid">
+      {% for material in materials %}
+      <article class="material-card" data-material-card data-filename="{{ material.filename }}">
+        <div class="material-head">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="material-badge">{{ material.type|upper }}</span>
+            {% if material.industry %}
+              <span class="material-badge" style="background:#ecfeff; color:#0f766e; border-color:#ccfbf1;">{{ material.industry }}</span>
+            {% endif %}
+            {% if material.solution %}
+              <span class="material-badge" style="background:#fff7ed; color:#c2410c; border-color:#fed7aa;">{{ material.solution }}</span>
+            {% endif %}
+          </div>
+          <span class="material-badge js-selected-badge" style="display:none; background:#ecfdf5; color:#166534; border-color:#bbf7d0;">Selecionado</span>
+        </div>
+
+        <h3 style="margin:0 0 8px; font-size:20px;">{{ material.title }}</h3>
+        <p class="file-name">Arquivo: {{ material.filename }}</p>
+
+        {% if material.description %}
+          <p class="meta-note" style="margin-top:10px;">{{ material.description }}</p>
+        {% else %}
+          <p class="meta-note" style="margin-top:10px;">Abra este material para estudar e adicioná-lo automaticamente ao pitch.</p>
+        {% endif %}
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+          <a
+            class="primary-btn"
+            href="/estudo/{{ material.id }}"
+          >
+            Estudar e selecionar
+          </a>
+          <button
+            type="button"
+            class="secondary-btn"
+            onclick="toggleStudySelection('{{ material.filename }}')"
+          >
+            Selecionar / desselecionar
+          </button>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">Nenhum material encontrado para os filtros aplicados.</div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function renderStudySelectionSummary() {
+    const container = document.getElementById("studySelectionSummary");
+    if (!container) return;
+
+    const selected = getSelectedMaterials();
+    container.innerHTML = "";
+
+    if (!selected.length) {
+      container.innerHTML = '<span class="hint">Nenhum material selecionado até o momento.</span>';
+      return;
+    }
+
+    selected.forEach(filename => {
+      const chip = document.createElement("span");
+      chip.className = "selection-chip";
+      chip.innerHTML = `
+        <span>${filename}</span>
+        <button type="button" title="Remover">×</button>
+      `;
+      chip.querySelector("button").addEventListener("click", async () => {
+        await removeSelectedMaterial(filename);
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  function syncStudyCards() {
+    document.querySelectorAll("[data-material-card]").forEach(card => {
+      const filename = card.dataset.filename;
+      const selected = isMaterialSelected(filename);
+      const badge = card.querySelector(".js-selected-badge");
+
+      card.style.borderColor = selected ? "#818cf8" : "";
+      card.style.boxShadow = selected ? "0 10px 22px rgba(79,70,229,.10)" : "";
+      if (badge) badge.style.display = selected ? "inline-flex" : "none";
+    });
+  }
+
+  async function toggleStudySelection(filename) {
+    await toggleSelectedMaterial(filename, !isMaterialSelected(filename));
+  }
+
+  renderStudySelectionSummary();
+  syncStudyCards();
+
+  window.addEventListener("materials-updated", () => {
+    renderStudySelectionSummary();
+    syncStudyCards();
+  });
+</script>
+{% endblock %}

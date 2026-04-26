@@ -1,0 +1,21 @@
+Vendedor: {{ seller_name }}
+
+Vídeo: {{ video_name }}
+
+Job ID: {{ job_id }}
+
+Tempo total: {{ elapsed_seconds }}s
+
+Nota final: {{ final_score }}
+
+Acurácia da IA: {{ "%.1f"|format(ai_accuracy) }}%
+
+{{ status }}
+
+{{ evaluation.summary }}
+
+{{ evaluation.improved_pitch }}
+
+{{ transcript }}
+
+<p><a href="/">Voltar</a></p>
