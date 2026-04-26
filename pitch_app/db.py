@@ -29,3 +29,28 @@ def init_db():
             WHERE id = OLD.id;
         END;
         """))
+
+
+# 👇 ADICIONE ESTA FUNÇÃO NOVA
+def migrate_db():
+    db = SessionLocal()
+    try:
+        # lista colunas existentes da tabela materials
+        columns = db.execute(text("PRAGMA table_info(materials)")).fetchall()
+        existing = {col[1] for col in columns}
+
+        migrations = {
+            "transcript_path": "ALTER TABLE materials ADD COLUMN transcript_path TEXT",
+            "has_transcript": "ALTER TABLE materials ADD COLUMN has_transcript INTEGER DEFAULT 0",
+            "summary_path": "ALTER TABLE materials ADD COLUMN summary_path TEXT",
+            "has_ai_summary": "ALTER TABLE materials ADD COLUMN has_ai_summary INTEGER DEFAULT 0",
+        }
+
+        for column, sql in migrations.items():
+            if column not in existing:
+                db.execute(text(sql))
+
+        db.commit()
+    finally:
+        db.close()
+        
