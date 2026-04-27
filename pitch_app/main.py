@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
@@ -17,6 +18,7 @@ from pitch_app.services.config import (
     TEMPLATES_DIR,
     STATIC_DIR,
     MATERIALS_DIR,
+    MAX_VIDEO_SIZE_MB,
 )
 
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,16 +26,18 @@ MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 (STATIC_DIR / "css").mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Sales Pitch AI V4")
-import os
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET_KEY", "fallback-secret"),
 )
+
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.state.templates = templates
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/materials", StaticFiles(directory=str(MATERIALS_DIR)), name="materials")
+
 app.include_router(admin_router)
 
 SESSION_MATERIALS_KEY = "selected_materials"
@@ -49,26 +53,31 @@ def _get_selected_materials(request: Request) -> list[str]:
     items = request.session.get(SESSION_MATERIALS_KEY, [])
     if not isinstance(items, list):
         return []
+
     cleaned = []
     seen = set()
+
     for item in items:
         if isinstance(item, str):
             value = item.strip()
             if value and value not in seen:
                 seen.add(value)
                 cleaned.append(value)
+
     return cleaned
 
 
 def _set_selected_materials(request: Request, items: list[str]) -> list[str]:
     cleaned = []
     seen = set()
+
     for item in items:
         if isinstance(item, str):
             value = item.strip()
             if value and value not in seen:
                 seen.add(value)
                 cleaned.append(value)
+
     request.session[SESSION_MATERIALS_KEY] = cleaned
     return cleaned
 
@@ -76,8 +85,10 @@ def _set_selected_materials(request: Request, items: list[str]) -> list[str]:
 def _add_selected_material(request: Request, filename: str) -> list[str]:
     current = _get_selected_materials(request)
     value = (filename or "").strip()
+
     if value and value not in current:
         current.append(value)
+
     return _set_selected_materials(request, current)
 
 
@@ -97,6 +108,7 @@ def _list_materials(industry: str = "all", solution: str = "all"):
         """)).fetchall()
 
         materials = []
+
         for r in rows:
             if not bool(r.active):
                 continue
@@ -117,6 +129,7 @@ def _list_materials(industry: str = "all", solution: str = "all"):
 
             if industry != "all" and item["industry"] != industry:
                 continue
+
             if solution != "all" and item["solution"] != solution:
                 continue
 
@@ -135,11 +148,42 @@ def _filter_options():
             FROM materials
             WHERE active = 1
         """)).fetchall()
+
         industry_options = sorted({r.industry for r in rows if r.industry})
         solution_options = sorted({r.solution for r in rows if r.solution})
+
         return industry_options, solution_options
     finally:
         db.close()
+
+
+def _validate_video_upload(video: UploadFile):
+    if not video or not video.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="Vídeo do pitch é obrigatório."
+        )
+
+    allowed_extensions = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
+    ext = Path(video.filename).suffix.lower()
+
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de vídeo não suportado. Use MP4, MOV, AVI, MKV ou WEBM."
+        )
+
+    max_size_bytes = MAX_VIDEO_SIZE_MB * 1024 * 1024
+
+    video.file.seek(0, 2)
+    file_size = video.file.tell()
+    video.file.seek(0)
+
+    if file_size > max_size_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Arquivo muito grande. Máximo permitido: {MAX_VIDEO_SIZE_MB}MB."
+        )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -169,6 +213,7 @@ async def study_index(request: Request, industry: str = "all", solution: str = "
 @app.get("/estudo/{material_id}", response_class=HTMLResponse)
 async def study_material(request: Request, material_id: int):
     db = SessionLocal()
+
     try:
         row = db.execute(text("""
             SELECT id, title, filename, file_type, industry, solution, description, sort_order, active
@@ -216,6 +261,7 @@ async def study_complete():
 async def pitch_form(request: Request):
     materials = _list_materials()
     industry_options, solution_options = _filter_options()
+
     return templates.TemplateResponse(
         "pitch_form.html",
         {
@@ -237,8 +283,10 @@ async def session_materials(request: Request):
 async def session_material_add(request: Request):
     data = await request.json()
     filename = (data.get("filename") or "").strip()
+
     if not filename:
         return JSONResponse(status_code=400, content={"detail": "filename obrigatório"})
+
     materials = _add_selected_material(request, filename)
     return JSONResponse({"materials": materials})
 
@@ -247,8 +295,10 @@ async def session_material_add(request: Request):
 async def session_material_remove(request: Request):
     data = await request.json()
     filename = (data.get("filename") or "").strip()
+
     if not filename:
         return JSONResponse(status_code=400, content={"detail": "filename obrigatório"})
+
     materials = _remove_selected_material(request, filename)
     return JSONResponse({"materials": materials})
 
@@ -257,8 +307,10 @@ async def session_material_remove(request: Request):
 async def session_material_set(request: Request):
     data = await request.json()
     items = data.get("materials", [])
+
     if not isinstance(items, list):
         return JSONResponse(status_code=400, content={"detail": "materials deve ser lista"})
+
     materials = _set_selected_materials(request, items)
     return JSONResponse({"materials": materials})
 
@@ -272,8 +324,10 @@ async def session_material_clear(request: Request):
 @app.get("/api/jobs/{job_id}")
 async def job_status(job_id: str):
     job = get_job(job_id)
+
     if not job:
         return JSONResponse(status_code=404, content={"detail": "Job não encontrado"})
+
     return JSONResponse(content=job)
 
 
@@ -284,7 +338,13 @@ async def analyze(
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
 ):
-    job_id = create_job(seller_name=(seller_name or "").strip(), video_name=video.filename or "")
+    _validate_video_upload(video)
+
+    job_id = create_job(
+        seller_name=(seller_name or "").strip(),
+        video_name=video.filename or "",
+    )
+
     try:
         result = evaluate_submission(
             job_id=job_id,
@@ -292,10 +352,31 @@ async def analyze(
             video=video,
             materials=materials,
         )
-        return templates.TemplateResponse("result.html", {"request": request, **result})
+
+        return templates.TemplateResponse(
+            "result.html",
+            {"request": request, **result}
+        )
+
     except AppError as exc:
-        update_job(job_id, stage="error", progress=100, message=exc.message, status="error")
+        update_job(
+            job_id,
+            stage="error",
+            progress=100,
+            message=exc.message,
+            status="error",
+        )
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
     except Exception as exc:
-        update_job(job_id, stage="error", progress=100, message=str(exc), status="error")
-        raise HTTPException(status_code=500, detail=f"Erro interno ao analisar o pitch: {exc}") from exc
+        update_job(
+            job_id,
+            stage="error",
+            progress=100,
+            message=str(exc),
+            status="error",
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno ao analisar o pitch: {exc}"
+        ) from exc
