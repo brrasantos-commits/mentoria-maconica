@@ -41,12 +41,21 @@ app.mount("/materials", StaticFiles(directory=str(MATERIALS_DIR)), name="materia
 app.include_router(admin_router)
 
 SESSION_MATERIALS_KEY = "selected_materials"
+SESSION_USER_KEY = "user_logged"
 
 
 @app.on_event("startup")
 def on_startup():
     init_db()
     migrate_db()
+
+
+def _is_user_logged(request: Request) -> bool:
+    return bool(request.session.get(SESSION_USER_KEY))
+
+
+def _login_redirect():
+    return RedirectResponse(url="/login", status_code=303)
 
 
 def _get_selected_materials(request: Request) -> list[str]:
@@ -187,12 +196,47 @@ def _validate_video_upload(video: UploadFile):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home():
-    return RedirectResponse(url="/estudo", status_code=303)
+async def home(request: Request):
+    if _is_user_logged(request):
+        return RedirectResponse(url="/estudo", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "error": None},
+    )
+
+
+@app.post("/login", response_class=HTMLResponse)
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    app_user = os.getenv("APP_USER", "user")
+    app_password = os.getenv("APP_PASSWORD", "123456")
+
+    if username == app_user and password == app_password:
+        request.session[SESSION_USER_KEY] = True
+        return RedirectResponse(url="/estudo", status_code=303)
+
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "error": "Usuário ou senha inválidos"},
+        status_code=401,
+    )
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/estudo", response_class=HTMLResponse)
 async def study_index(request: Request, industry: str = "all", solution: str = "all"):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
     materials = _list_materials(industry=industry, solution=solution)
     industry_options, solution_options = _filter_options()
 
@@ -212,6 +256,9 @@ async def study_index(request: Request, industry: str = "all", solution: str = "
 
 @app.get("/estudo/{material_id}", response_class=HTMLResponse)
 async def study_material(request: Request, material_id: int):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
     db = SessionLocal()
 
     try:
@@ -253,12 +300,18 @@ async def study_material(request: Request, material_id: int):
 
 
 @app.post("/estudo/concluir")
-async def study_complete():
+async def study_complete(request: Request):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
     return RedirectResponse(url="/pitch", status_code=303)
 
 
 @app.get("/pitch", response_class=HTMLResponse)
 async def pitch_form(request: Request):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
     materials = _list_materials()
     industry_options, solution_options = _filter_options()
 
@@ -276,11 +329,17 @@ async def pitch_form(request: Request):
 
 @app.get("/api/session/materials")
 async def session_materials(request: Request):
+    if not _is_user_logged(request):
+        return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
+
     return JSONResponse({"materials": _get_selected_materials(request)})
 
 
 @app.post("/api/session/materials/add")
 async def session_material_add(request: Request):
+    if not _is_user_logged(request):
+        return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
+
     data = await request.json()
     filename = (data.get("filename") or "").strip()
 
@@ -293,6 +352,9 @@ async def session_material_add(request: Request):
 
 @app.post("/api/session/materials/remove")
 async def session_material_remove(request: Request):
+    if not _is_user_logged(request):
+        return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
+
     data = await request.json()
     filename = (data.get("filename") or "").strip()
 
@@ -305,6 +367,9 @@ async def session_material_remove(request: Request):
 
 @app.post("/api/session/materials/set")
 async def session_material_set(request: Request):
+    if not _is_user_logged(request):
+        return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
+
     data = await request.json()
     items = data.get("materials", [])
 
@@ -317,6 +382,9 @@ async def session_material_set(request: Request):
 
 @app.post("/api/session/materials/clear")
 async def session_material_clear(request: Request):
+    if not _is_user_logged(request):
+        return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
+
     request.session[SESSION_MATERIALS_KEY] = []
     return JSONResponse({"materials": []})
 
@@ -338,6 +406,9 @@ async def analyze(
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
 ):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
     _validate_video_upload(video)
 
     job_id = create_job(
@@ -368,15 +439,15 @@ async def analyze(
         )
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
-    except Exception as exc:
+    except Exception:
         update_job(
             job_id,
             stage="error",
             progress=100,
-            message=str(exc),
+            message="Erro interno ao analisar o pitch.",
             status="error",
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Erro interno ao analisar o pitch: {exc}"
-        ) from exc
+            detail="Erro interno ao analisar o pitch. Tente novamente."
+        )
