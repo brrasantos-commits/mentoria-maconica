@@ -7,8 +7,15 @@ BASE_DIR = APP_DIR
 
 TEMPLATES_DIR = APP_DIR / "templates"
 STATIC_DIR = APP_DIR / "static"
-MATERIALS_DIR = APP_DIR / "materials"
-UPLOAD_DIR = APP_DIR / "uploads"
+
+# ==============================
+# PERSISTÊNCIA (Railway Volume)
+# ==============================
+
+DATA_DIR = Path(os.getenv("APP_DATA_DIR", APP_DIR / "data"))
+
+MATERIALS_DIR = DATA_DIR / "materials"
+UPLOAD_DIR = DATA_DIR / "uploads"
 
 # Sidecars para materiais processados
 PROCESSED_DIR = MATERIALS_DIR / "_processed"
@@ -16,13 +23,16 @@ MATERIAL_TRANSCRIPTS_DIR = PROCESSED_DIR / "transcripts"
 MATERIAL_SUMMARIES_DIR = PROCESSED_DIR / "summaries"
 MATERIAL_AUDIO_CACHE_DIR = PROCESSED_DIR / "audio"
 
+# Criar diretórios
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 MATERIAL_TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
 MATERIAL_SUMMARIES_DIR.mkdir(parents=True, exist_ok=True)
 MATERIAL_AUDIO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+# OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 OPENAI_TRANSCRIPTION_MODEL = os.getenv(

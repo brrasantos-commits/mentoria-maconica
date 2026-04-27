@@ -12,8 +12,7 @@ from pitch_app.services.material_processing_service import process_material_on_u
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-BASE_DIR = Path(__file__).resolve().parent
-MATERIALS_DIR = BASE_DIR / "materials"
+from pitch_app.services.config import MATERIALS_DIR
 
 INDUSTRY_OPTIONS = ["Varejo", "Saúde", "Finanças", "Tecnologia", "Educação", "Indústria"]
 SOLUTION_OPTIONS = ["Software", "Serviços", "Consultoria", "Hardware", "Plataforma"]

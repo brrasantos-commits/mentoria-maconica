@@ -25,7 +25,7 @@ from pitch_app.services.transcription_service import (
     transcribe_audio,
 )
 
-MATERIALS_DIR = Path(__file__).resolve().parent.parent / "materials"
+from pitch_app.services.config import MATERIALS_DIR
 
 
 def _normalize_material_name(value: str) -> str:

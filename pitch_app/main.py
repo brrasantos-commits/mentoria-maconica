@@ -13,10 +13,11 @@ from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
 
-BASE_DIR = Path(__file__).resolve().parent
-TEMPLATES_DIR = BASE_DIR / "templates"
-STATIC_DIR = BASE_DIR / "static"
-MATERIALS_DIR = BASE_DIR / "materials"
+from pitch_app.services.config import (
+    TEMPLATES_DIR,
+    STATIC_DIR,
+    MATERIALS_DIR,
+)
 
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
