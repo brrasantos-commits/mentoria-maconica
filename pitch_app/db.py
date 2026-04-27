@@ -1,7 +1,13 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "sqlite:///./pitch_app.db"
+import os
+from pathlib import Path
+
+DATA_DIR = Path(os.getenv("APP_DATA_DIR", "./data"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+DATABASE_URL = f"sqlite:///{DATA_DIR / 'pitch_app.db'}"
 
 engine = create_engine(
     DATABASE_URL,
