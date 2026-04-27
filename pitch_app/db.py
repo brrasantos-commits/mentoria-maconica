@@ -35,7 +35,20 @@ def init_db():
             WHERE id = OLD.id;
         END;
         """))
+    with engine.begin() as conn:
+        # criar admin padrão se não existir
+        conn.execute(text("""
+            INSERT INTO users (name, username, password, role, active)
+            SELECT 'Admin', 'admin', 'admin123', 'admin', 1
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
+        """))
 
+        # criar vendedor padrão
+        conn.execute(text("""
+            INSERT INTO users (name, username, password, role, active)
+            SELECT 'Vendedor', 'vendedor', '123456', 'seller', 1
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'vendedor');
+        """))
 
 # 👇 ADICIONE ESTA FUNÇÃO NOVA
 def migrate_db():

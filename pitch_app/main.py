@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from pitch_app.admin_routes import router as admin_router
 from pitch_app.db import init_db, SessionLocal, migrate_db
+from sqlalchemy import text
 from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
@@ -212,12 +213,30 @@ async def login_form(request: Request):
 
 @app.post("/login", response_class=HTMLResponse)
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    app_user = os.getenv("APP_USER", "user")
-    app_password = os.getenv("APP_PASSWORD", "123456")
+    db = SessionLocal()
 
-    if username == app_user and password == app_password:
-        request.session[SESSION_USER_KEY] = True
-        return RedirectResponse(url="/estudo", status_code=303)
+    try:
+        user = db.execute(text("""
+            SELECT id, name, username, role, active
+            FROM users
+            WHERE username = :username
+              AND password = :password
+              AND active = 1
+        """), {
+            "username": username,
+            "password": password
+        }).fetchone()
+
+        if user:
+            request.session[SESSION_USER_KEY] = True
+            request.session["user_id"] = user.id
+            request.session["user_name"] = user.name
+            request.session["user_role"] = user.role
+
+            return RedirectResponse(url="/estudo", status_code=303)
+
+    finally:
+        db.close()
 
     return templates.TemplateResponse(
         "login.html",

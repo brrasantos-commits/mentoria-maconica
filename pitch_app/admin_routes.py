@@ -19,7 +19,7 @@ SOLUTION_OPTIONS = ["Software", "Serviços", "Consultoria", "Hardware", "Platafo
 
 
 def _is_admin(request: Request):
-    return bool(request.session.get("admin_logged_in"))
+    return request.session.get("user_role") == "admin"
 
 
 def _admin_only(request: Request):
