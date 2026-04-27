@@ -24,7 +24,12 @@ MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 (STATIC_DIR / "css").mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Sales Pitch AI V4")
-app.add_middleware(SessionMiddleware, secret_key="change-this-secret-in-production")
+import os
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET_KEY", "fallback-secret"),
+)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.state.templates = templates
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

@@ -73,7 +73,12 @@ def admin_login_form(request: Request):
 
 @router.post("/login", response_class=HTMLResponse)
 def admin_login(request: Request, username: str = Form(...), password: str = Form(...)):
-    if username == "admin" and password == "admin123":
+    import os
+
+ADMIN_USER = os.getenv("ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+if username == ADMIN_USER and password == ADMIN_PASSWORD:
         request.session["admin_logged_in"] = True
         return RedirectResponse(url="/admin/materials", status_code=303)
 
