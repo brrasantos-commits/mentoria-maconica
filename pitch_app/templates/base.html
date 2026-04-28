@@ -456,11 +456,20 @@
         <p>Treinamento comercial, estudo de materiais, envio de pitch e gestão administrativa.</p>
       </div>
 
-      <nav class="site-nav">
-        <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">Estudo</a>
-        <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">Pitch</a>
-        <a class="nav-link {% if request.url.path.startswith('/admin') %}active{% endif %}" href="/admin/login">Admin</a>
-      </nav>
+     <nav class="site-nav">
+      <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">Estudo</a>
+      <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">Pitch</a>
+
+      {% if request.session.get("user_role") == "admin" %}
+        <a class="nav-link {% if request.url.path.startswith('/admin') %}active{% endif %}" href="/admin/materials">Admin</a>
+      {% endif %}
+
+      {% if request.session.get("user_logged") %}
+        <a class="nav-link" href="/logout">Logout</a>
+      {% else %}
+        <a class="nav-link {% if request.url.path.startswith('/login') %}active{% endif %}" href="/login">Login</a>
+      {% endif %}
+    </nav>
     </header>
 
     {% block content %}{% endblock %}

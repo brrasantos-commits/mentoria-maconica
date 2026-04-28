@@ -23,8 +23,8 @@ def _is_admin(request: Request):
 
 
 def _admin_only(request: Request):
-    if not _is_admin(request):
-        raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
+    if request.session.get("user_role") != "admin":
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
 
 
 def _guess_type(filename: str) -> str:
@@ -65,26 +65,12 @@ def _list_materials():
 
 @router.get("/login", response_class=HTMLResponse)
 def admin_login_form(request: Request):
-    return request.app.state.templates.TemplateResponse(
-        "admin_login.html",
-        {"request": request, "error": None},
-    )
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @router.post("/login", response_class=HTMLResponse)
 def admin_login(request: Request, username: str = Form(...), password: str = Form(...)):
-    admin_user = os.getenv("ADMIN_USER", "admin")
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-
-    if username == admin_user and password == admin_password:
-        request.session["admin_logged_in"] = True
-        return RedirectResponse(url="/admin/materials", status_code=303)
-
-    return request.app.state.templates.TemplateResponse(
-        "admin_login.html",
-        {"request": request, "error": "Usuário ou senha inválidos"},
-        status_code=401,
-    )
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @router.get("/logout")

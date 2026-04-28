@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
+from io import BytesIO
+from types import SimpleNamespace
 
-from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
+from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,7 +12,6 @@ from sqlalchemy import text
 
 from pitch_app.admin_routes import router as admin_router
 from pitch_app.db import init_db, SessionLocal, migrate_db
-from sqlalchemy import text
 from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
@@ -169,10 +170,7 @@ def _filter_options():
 
 def _validate_video_upload(video: UploadFile):
     if not video or not video.filename:
-        raise HTTPException(
-            status_code=400,
-            detail="Vídeo do pitch é obrigatório."
-        )
+        raise HTTPException(status_code=400, detail="Vídeo do pitch é obrigatório.")
 
     allowed_extensions = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
     ext = Path(video.filename).suffix.lower()
@@ -193,6 +191,54 @@ def _validate_video_upload(video: UploadFile):
         raise HTTPException(
             status_code=400,
             detail=f"Arquivo muito grande. Máximo permitido: {MAX_VIDEO_SIZE_MB}MB."
+        )
+
+
+def _run_analysis_job(
+    job_id: str,
+    seller_name: str,
+    video_filename: str,
+    video_bytes: bytes,
+    materials: list[str],
+):
+    try:
+        fake_upload = SimpleNamespace(
+            filename=video_filename,
+            file=BytesIO(video_bytes),
+        )
+
+        result = evaluate_submission(
+            job_id=job_id,
+            seller_name=seller_name,
+            video=fake_upload,
+            materials=materials,
+        )
+
+        update_job(
+            job_id,
+            status="done",
+            stage="done",
+            progress=100,
+            message="Análise concluída",
+            result=result,
+        )
+
+    except AppError as exc:
+        update_job(
+            job_id,
+            status="error",
+            stage="error",
+            progress=100,
+            message=exc.message,
+        )
+
+    except Exception:
+        update_job(
+            job_id,
+            status="error",
+            stage="error",
+            progress=100,
+            message="Erro interno ao analisar o pitch. Tente novamente.",
         )
 
 
@@ -232,6 +278,9 @@ async def login(request: Request, username: str = Form(...), password: str = For
             request.session["user_id"] = user.id
             request.session["user_name"] = user.name
             request.session["user_role"] = user.role
+
+            if user.role == "admin":
+                return RedirectResponse(url="/admin/materials", status_code=303)
 
             return RedirectResponse(url="/estudo", status_code=303)
 
@@ -409,7 +458,10 @@ async def session_material_clear(request: Request):
 
 
 @app.get("/api/jobs/{job_id}")
-async def job_status(job_id: str):
+async def job_status(request: Request, job_id: str):
+    if not _is_user_logged(request):
+        return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
+
     job = get_job(job_id)
 
     if not job:
@@ -421,6 +473,7 @@ async def job_status(job_id: str):
 @app.post("/analyze", response_class=HTMLResponse)
 async def analyze(
     request: Request,
+    background_tasks: BackgroundTasks,
     seller_name: str = Form(...),
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
@@ -430,43 +483,76 @@ async def analyze(
 
     _validate_video_upload(video)
 
+    video_bytes = await video.read()
+    video_filename = video.filename or "video.mp4"
+
     job_id = create_job(
         seller_name=(seller_name or "").strip(),
-        video_name=video.filename or "",
+        video_name=video_filename,
     )
 
-    try:
-        result = evaluate_submission(
-            job_id=job_id,
-            seller_name=seller_name,
-            video=video,
-            materials=materials,
-        )
+    update_job(
+        job_id,
+        stage="queued",
+        progress=5,
+        message="Análise enviada para processamento",
+        status="running",
+    )
 
-        return templates.TemplateResponse(
-            "result.html",
-            {"request": request, **result}
-        )
+    background_tasks.add_task(
+        _run_analysis_job,
+        job_id,
+        seller_name,
+        video_filename,
+        video_bytes,
+        materials,
+    )
 
-    except AppError as exc:
-        update_job(
-            job_id,
-            stage="error",
-            progress=100,
-            message=exc.message,
-            status="error",
-        )
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return RedirectResponse(url=f"/analyze/progress/{job_id}", status_code=303)
 
-    except Exception:
-        update_job(
-            job_id,
-            stage="error",
-            progress=100,
-            message="Erro interno ao analisar o pitch.",
-            status="error",
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Erro interno ao analisar o pitch. Tente novamente."
-        )
+
+@app.get("/analyze/progress/{job_id}", response_class=HTMLResponse)
+async def analyze_progress(request: Request, job_id: str):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
+    job = get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job não encontrado")
+
+    return templates.TemplateResponse(
+        "analyze_progress.html",
+        {
+            "request": request,
+            "job_id": job_id,
+            "job": job,
+        },
+    )
+
+
+@app.get("/analyze/result/{job_id}", response_class=HTMLResponse)
+async def analyze_result(request: Request, job_id: str):
+    if not _is_user_logged(request):
+        return _login_redirect()
+
+    job = get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job não encontrado")
+
+    if job.get("status") != "done":
+        return RedirectResponse(url=f"/analyze/progress/{job_id}", status_code=303)
+
+    result = job.get("result")
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Resultado não encontrado")
+
+    return templates.TemplateResponse(
+        "result.html",
+        {
+            "request": request,
+            **result,
+        },
+    )
