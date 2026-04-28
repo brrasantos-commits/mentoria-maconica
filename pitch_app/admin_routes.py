@@ -358,3 +358,181 @@ def delete_material(request: Request, material_id: int):
         db.close()
 
     return RedirectResponse(url="/admin/materials", status_code=303)
+    @router.get("/users", response_class=HTMLResponse)
+def admin_users(request: Request):
+    _admin_only(request)
+
+    db = SessionLocal()
+    try:
+        rows = db.execute(text("""
+            SELECT id, name, username, role, active, created_at
+            FROM users
+            ORDER BY role ASC, name ASC
+        """)).fetchall()
+
+        users = [
+            {
+                "id": r.id,
+                "name": r.name,
+                "username": r.username,
+                "role": r.role,
+                "active": bool(r.active),
+                "created_at": r.created_at,
+            }
+            for r in rows
+        ]
+    finally:
+        db.close()
+
+    return request.app.state.templates.TemplateResponse(
+        "admin_users.html",
+        {"request": request, "users": users},
+    )
+
+
+@router.get("/users/new", response_class=HTMLResponse)
+def new_user_form(request: Request):
+    _admin_only(request)
+
+    return request.app.state.templates.TemplateResponse(
+        "admin_user_form.html",
+        {
+            "request": request,
+            "user": None,
+            "form_action": "/admin/users/new",
+        },
+    )
+
+
+@router.post("/users/new")
+def create_user(
+    request: Request,
+    name: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    role: str = Form(...),
+    active: bool = Form(False),
+):
+    _admin_only(request)
+
+    role = role.strip().lower()
+    if role not in ["admin", "seller"]:
+        raise HTTPException(status_code=400, detail="Perfil inválido")
+
+    db = SessionLocal()
+    try:
+        existing = db.execute(text("""
+            SELECT id FROM users WHERE username = :username
+        """), {"username": username.strip()}).fetchone()
+
+        if existing:
+            raise HTTPException(status_code=400, detail="Usuário já existe")
+
+        db.execute(text("""
+            INSERT INTO users (name, username, password, role, active)
+            VALUES (:name, :username, :password, :role, :active)
+        """), {
+            "name": name.strip(),
+            "username": username.strip(),
+            "password": password.strip(),
+            "role": role,
+            "active": 1 if active else 0,
+        })
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
+@router.get("/users/{user_id}/edit", response_class=HTMLResponse)
+def edit_user_form(request: Request, user_id: int):
+    _admin_only(request)
+
+    db = SessionLocal()
+    try:
+        row = db.execute(text("""
+            SELECT id, name, username, role, active
+            FROM users
+            WHERE id = :id
+        """), {"id": user_id}).fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        user = {
+            "id": row.id,
+            "name": row.name,
+            "username": row.username,
+            "role": row.role,
+            "active": bool(row.active),
+        }
+    finally:
+        db.close()
+
+    return request.app.state.templates.TemplateResponse(
+        "admin_user_form.html",
+        {
+            "request": request,
+            "user": user,
+            "form_action": f"/admin/users/{user_id}/edit",
+        },
+    )
+
+
+@router.post("/users/{user_id}/edit")
+def update_user(
+    request: Request,
+    user_id: int,
+    name: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(""),
+    role: str = Form(...),
+    active: bool = Form(False),
+):
+    _admin_only(request)
+
+    role = role.strip().lower()
+    if role not in ["admin", "seller"]:
+        raise HTTPException(status_code=400, detail="Perfil inválido")
+
+    db = SessionLocal()
+    try:
+        if password.strip():
+            db.execute(text("""
+                UPDATE users
+                SET name = :name,
+                    username = :username,
+                    password = :password,
+                    role = :role,
+                    active = :active
+                WHERE id = :id
+            """), {
+                "id": user_id,
+                "name": name.strip(),
+                "username": username.strip(),
+                "password": password.strip(),
+                "role": role,
+                "active": 1 if active else 0,
+            })
+        else:
+            db.execute(text("""
+                UPDATE users
+                SET name = :name,
+                    username = :username,
+                    role = :role,
+                    active = :active
+                WHERE id = :id
+            """), {
+                "id": user_id,
+                "name": name.strip(),
+                "username": username.strip(),
+                "role": role,
+                "active": 1 if active else 0,
+            })
+
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/users", status_code=303)

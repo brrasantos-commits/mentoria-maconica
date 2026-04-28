@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Usuário | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card" style="max-width:720px; margin:auto;">
+  <div class="hero-block">
+    <div>
+      <h2>{% if user %}Editar usuário{% else %}Novo usuário{% endif %}</h2>
+      <p>Configure nome, login, senha, perfil e status de acesso.</p>
+    </div>
+  </div>
+
+  <form method="post" action="{{ form_action }}" class="panel-card" style="display:grid; gap:16px;">
+    <div>
+      <label>Nome completo</label>
+      <input type="text" name="name" required value="{{ user.name if user else '' }}">
+    </div>
+
+    <div>
+      <label>Usuário de login</label>
+      <input type="text" name="username" required value="{{ user.username if user else '' }}">
+    </div>
+
+    <div>
+      <label>Senha</label>
+      <input
+        type="password"
+        name="password"
+        {% if not user %}required{% endif %}
+        placeholder="{% if user %}Preencha apenas se quiser alterar a senha{% else %}Digite a senha inicial{% endif %}"
+      >
+    </div>
+
+    <div>
+      <label>Perfil</label>
+      <select name="role" required>
+        <option value="seller" {% if user and user.role == 'seller' %}selected{% endif %}>Vendedor</option>
+        <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Administrador</option>
+      </select>
+    </div>
+
+    <label style="display:flex; gap:10px; align-items:center;">
+      <input type="checkbox" name="active" value="true" {% if not user or user.active %}checked{% endif %}>
+      Usuário ativo
+    </label>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary-btn" type="submit">Salvar</button>
+      <a class="secondary-btn" href="/admin/users">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
