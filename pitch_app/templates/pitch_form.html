@@ -12,7 +12,10 @@
     <div class="hero-pill">Seleção centralizada na sessão</div>
   </div>
 
-  <form method="post" action="/analyze" enctype="multipart/form-data" class="panel-card" style="display:grid; gap:18px;">
+  <form method="post" action="/analyze" enctype="multipart/form-data"
+      class="panel-card"
+      style="display:grid; gap:18px;"
+      onsubmit="document.getElementById('submitBtn').disabled=true; document.getElementById('submitBtn').innerText='Enviando...';">
     <div class="form-row">
       <div>
         <label for="seller_name">Nome do vendedor</label>
@@ -118,7 +121,7 @@
     </div>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="submit" class="primary-btn">Enviar para análise</button>
+      <button id="submitBtn" type="submit" class="primary-btn">Enviar para análise</button>
       <a class="secondary-btn" href="/estudo">Voltar ao estudo</a>
     </div>
   </form>

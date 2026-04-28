@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Processando análise | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card" style="max-width:780px; margin:auto;">
+  <div class="hero-block">
+    <div>
+      <h2>Análise em andamento</h2>
+      <p>Estamos processando o vídeo, transcrevendo o áudio e avaliando o pitch com IA.</p>
+    </div>
+    <div class="hero-pill">Processamento com IA</div>
+  </div>
+
+  <div class="panel-card" style="display:grid; gap:22px;">
+    <div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <strong id="progressStage">Preparando análise</strong>
+        <strong id="progressValue">0%</strong>
+      </div>
+
+      <div style="width:100%; height:20px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+        <div id="progressBar" style="width:0%; height:100%; background:#4f46e5; transition:width .45s ease;"></div>
+      </div>
+    </div>
+
+    <div class="card-note">
+      <strong>Status:</strong>
+      <span id="progressMessage">Iniciando...</span>
+    </div>
+
+    <div class="hint">
+      Mantenha esta tela aberta. Quando a análise terminar, o resultado será aberto automaticamente.
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const jobId = "{{ job_id }}";
+
+  async function refreshProgress() {
+    try {
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        credentials: "same-origin"
+      });
+
+      if (!response.ok) {
+        document.getElementById("progressMessage").textContent =
+          "Não foi possível consultar o status da análise.";
+        setTimeout(refreshProgress, 2000);
+        return;
+      }
+
+      const job = await response.json();
+
+      const progress = Number(job.progress || 0);
+      const stage = job.stage || "processing";
+      const message = job.message || "Processando...";
+
+      document.getElementById("progressValue").textContent = `${progress}%`;
+      document.getElementById("progressBar").style.width = `${progress}%`;
+      document.getElementById("progressStage").textContent = stage;
+      document.getElementById("progressMessage").textContent = message;
+
+      if (job.status === "done") {
+        window.location.href = `/analyze/result/${jobId}`;
+        return;
+      }
+
+      if (job.status === "error") {
+        document.getElementById("progressMessage").textContent =
+          message || "Erro ao processar análise.";
+        return;
+      }
+
+      setTimeout(refreshProgress, 1200);
+
+    } catch (error) {
+      document.getElementById("progressMessage").textContent =
+        "Falha temporária ao consultar o progresso.";
+      setTimeout(refreshProgress, 2000);
+    }
+  }
+
+  refreshProgress();
+</script>
+{% endblock %}
