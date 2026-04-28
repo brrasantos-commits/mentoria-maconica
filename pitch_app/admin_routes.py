@@ -360,9 +360,9 @@ async def update_material(
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-    @router.get("/users", response_class=HTMLResponse)
-    def admin_users(request: Request):
-        _admin_only(request)
+@router.get("/users", response_class=HTMLResponse)
+def admin_users(request: Request):
+    _admin_only(request)
 
     db = SessionLocal()
     try:
