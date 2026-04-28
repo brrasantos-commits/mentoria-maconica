@@ -174,9 +174,9 @@ async def create_material(
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-@router.get("/materials/{material_id}/edit", response_class=HTMLResponse)
-def edit_material_form(request: Request, material_id: int):
-    _admin_only(request)
+    @router.get("/materials/{material_id}/edit", response_class=HTMLResponse)
+    def edit_material_form(request: Request, material_id: int):
+        _admin_only(request)
     db = SessionLocal()
     try:
         row = db.execute(text("""
@@ -258,9 +258,9 @@ async def update_material(
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-@router.post("/materials/{material_id}/reprocess")
-def reprocess_material(request: Request, material_id: int):
-    _admin_only(request)
+    @router.post("/materials/{material_id}/reprocess")
+    def reprocess_material(request: Request, material_id: int):
+        _admin_only(request)
 
     db = SessionLocal()
     try:
@@ -322,9 +322,9 @@ def reprocess_material(request: Request, material_id: int):
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-@router.post("/materials/{material_id}/delete")
-def delete_material(request: Request, material_id: int):
-    _admin_only(request)
+    @router.post("/materials/{material_id}/delete")
+    def delete_material(request: Request, material_id: int):
+        _admin_only(request)
     db = SessionLocal()
     try:
         row = db.execute(text("""
@@ -361,8 +361,8 @@ def delete_material(request: Request, material_id: int):
 
 
     @router.get("/users", response_class=HTMLResponse)
-def admin_users(request: Request):
-    _admin_only(request)
+    def admin_users(request: Request):
+        _admin_only(request)
 
     db = SessionLocal()
     try:
