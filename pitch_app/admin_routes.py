@@ -361,7 +361,7 @@ def delete_material(request: Request, material_id: int):
 
 
     @router.get("/users", response_class=HTMLResponse)
-    def admin_users(request: Request):
+def admin_users(request: Request):
     _admin_only(request)
 
     db = SessionLocal()
