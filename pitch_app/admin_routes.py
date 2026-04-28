@@ -361,8 +361,8 @@ async def update_material(
 
 
     @router.get("/users", response_class=HTMLResponse)
-def admin_users(request: Request):
-    _admin_only(request)
+    def admin_users(request: Request):
+        _admin_only(request)
 
     db = SessionLocal()
     try:
