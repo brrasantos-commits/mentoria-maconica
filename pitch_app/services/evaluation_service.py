@@ -101,6 +101,9 @@ def evaluate_submission(
 
     client = get_openai_client()
     transcript_text = transcribe_audio(client, paths.audio_path)
+    print("=== TRANSCRIÇÃO DO VÍDEO DO VENDEDOR ===")
+    print(transcript_text[:1000])
+    print("=== FIM TRANSCRIÇÃO ===")
     paths.transcript_path.write_text(transcript_text, encoding="utf-8")
 
     update_job(
