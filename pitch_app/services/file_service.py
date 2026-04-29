@@ -48,16 +48,19 @@ def validate_material(material: UploadFile) -> str:
 
 def create_submission_paths(seller_name: str, video_filename: str) -> SubmissionPaths:
     seller_folder = sanitize_name(seller_name)
-    base_name = sanitize_stem(video_filename)
-    submission_id = uuid.uuid4().hex[:8]
-    root = UPLOAD_DIR / seller_folder / f'{base_name}_{submission_id}'
+
+    # 🔥 ID totalmente único por execução
+    submission_id = uuid.uuid4().hex
+
+    root = UPLOAD_DIR / seller_folder / submission_id
     root.mkdir(parents=True, exist_ok=True)
+
     return SubmissionPaths(
         root=root,
-        video_path=root / f"video{Path(video_filename).suffix.lower()}",
-        audio_path=root / 'audio.wav',
-        transcript_path=root / f'{base_name}.txt',
-        feedback_path=root / f'{base_name}_feedback.txt',
+        video_path=root / "video.mp4",
+        audio_path=root / "audio.wav",
+        transcript_path=root / "transcript.txt",
+        feedback_path=root / "feedback.txt",
     )
 
 def save_upload(file: UploadFile, destination: Path) -> Path:
