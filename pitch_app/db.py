@@ -69,6 +69,20 @@ def migrate_db():
             if column not in existing:
                 db.execute(text(sql))
 
+        # 🔥 NOVO BLOCO PARA USERS
+        user_columns = db.execute(text("PRAGMA table_info(users)")).fetchall()
+        user_existing = {col[1] for col in user_columns}
+
+        user_migrations = {
+            "email": "ALTER TABLE users ADD COLUMN email TEXT",
+            "reset_token": "ALTER TABLE users ADD COLUMN reset_token TEXT",
+            "reset_token_expiry": "ALTER TABLE users ADD COLUMN reset_token_expiry TEXT",
+        }
+
+        for column, sql in user_migrations.items():
+            if column not in user_existing:
+                db.execute(text(sql))
+
         db.commit()
     finally:
         db.close()

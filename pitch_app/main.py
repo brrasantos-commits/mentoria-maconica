@@ -3,6 +3,10 @@ from pathlib import Path
 from io import BytesIO
 from types import SimpleNamespace
 
+import uuid
+from datetime import datetime, timedelta
+from pitch_app.services.email_service import send_reset_email
+
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -293,6 +297,100 @@ async def login(request: Request, username: str = Form(...), password: str = For
         status_code=401,
     )
 
+# 🔥 RESET DE SENHA
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_form(request: Request):
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {"request": request}
+    )
+
+
+@app.post("/forgot-password")
+async def forgot_password(request: Request, email: str = Form(...)):
+    import uuid
+    from datetime import datetime, timedelta
+    from pitch_app.services.email_service import send_reset_email
+
+    db = SessionLocal()
+
+    try:
+        user = db.execute(text("""
+            SELECT id FROM users WHERE email = :email
+        """), {"email": email}).fetchone()
+
+        if user:
+            token = uuid.uuid4().hex
+            expiry = datetime.utcnow() + timedelta(hours=1)
+
+            db.execute(text("""
+                UPDATE users
+                SET reset_token = :token,
+                    reset_token_expiry = :expiry
+                WHERE id = :id
+            """), {
+                "token": token,
+                "expiry": expiry.isoformat(),
+                "id": user.id
+            })
+            db.commit()
+
+            reset_link = f"{request.base_url}reset-password?token={token}"
+            send_reset_email(email, reset_link)
+
+    finally:
+        db.close()
+
+    return HTMLResponse("Se o e-mail existir, você receberá instruções.")
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_form(request: Request, token: str):
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {"request": request, "token": token}
+    )
+
+
+@app.post("/reset-password")
+async def reset_password(token: str = Form(...), new_password: str = Form(...)):
+    from datetime import datetime
+
+    db = SessionLocal()
+
+    try:
+        user = db.execute(text("""
+            SELECT id, reset_token_expiry
+            FROM users
+            WHERE reset_token = :token
+        """), {"token": token}).fetchone()
+
+        if not user:
+            raise HTTPException(status_code=400, detail="Token inválido")
+
+        expiry = datetime.fromisoformat(user.reset_token_expiry)
+
+        if datetime.utcnow() > expiry:
+            raise HTTPException(status_code=400, detail="Token expirado")
+
+        db.execute(text("""
+            UPDATE users
+            SET password = :password,
+                reset_token = NULL,
+                reset_token_expiry = NULL
+            WHERE id = :id
+        """), {
+            "password": new_password,
+            "id": user.id
+        })
+
+        db.commit()
+
+    finally:
+        db.close()
+
+    return HTMLResponse("Senha alterada com sucesso!")
 
 @app.get("/logout")
 async def logout(request: Request):
