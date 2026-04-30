@@ -9,10 +9,9 @@ from openai import OpenAI
 
 from pitch_app.db import SessionLocal
 from pitch_app.services.material_processing_service import process_material_on_upload
+from pitch_app.services.config import MATERIALS_DIR
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-from pitch_app.services.config import MATERIALS_DIR
 
 INDUSTRY_OPTIONS = ["Varejo", "Saúde", "Finanças", "Tecnologia", "Educação", "Indústria"]
 SOLUTION_OPTIONS = ["Software", "Serviços", "Consultoria", "Hardware", "Plataforma"]
@@ -76,7 +75,7 @@ def admin_login(request: Request, username: str = Form(...), password: str = For
 @router.get("/logout")
 def admin_logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url="/admin/login", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @router.get("/materials", response_class=HTMLResponse)
@@ -174,9 +173,9 @@ async def create_material(
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-    @router.get("/materials/{material_id}/edit", response_class=HTMLResponse)
-    def edit_material_form(request: Request, material_id: int):
-        _admin_only(request)
+@router.get("/materials/{material_id}/edit", response_class=HTMLResponse)
+def edit_material_form(request: Request, material_id: int):
+    _admin_only(request)
     db = SessionLocal()
     try:
         row = db.execute(text("""
@@ -258,9 +257,9 @@ async def update_material(
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-    @router.post("/materials/{material_id}/reprocess")
-    def reprocess_material(request: Request, material_id: int):
-        _admin_only(request)
+@router.post("/materials/{material_id}/reprocess")
+def reprocess_material(request: Request, material_id: int):
+    _admin_only(request)
 
     db = SessionLocal()
     try:
@@ -280,11 +279,6 @@ async def update_material(
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         if not api_key:
             raise HTTPException(status_code=500, detail="OPENAI_API_KEY não configurada")
-
-        transcript_path = None
-        has_transcript = 0
-        summary_path = None
-        has_ai_summary = 0
 
         try:
             client = OpenAI(api_key=api_key)
@@ -322,9 +316,9 @@ async def update_material(
     return RedirectResponse(url="/admin/materials", status_code=303)
 
 
-    @router.post("/materials/{material_id}/delete")
-    def delete_material(request: Request, material_id: int):
-        _admin_only(request)
+@router.post("/materials/{material_id}/delete")
+def delete_material(request: Request, material_id: int):
+    _admin_only(request)
     db = SessionLocal()
     try:
         row = db.execute(text("""
@@ -367,7 +361,7 @@ def admin_users(request: Request):
     db = SessionLocal()
     try:
         rows = db.execute(text("""
-            SELECT id, name, username, role, active, created_at
+            SELECT id, name, username, email, role, active, created_at
             FROM users
             ORDER BY role ASC, name ASC
         """)).fetchall()
@@ -377,6 +371,7 @@ def admin_users(request: Request):
                 "id": r.id,
                 "name": r.name,
                 "username": r.username,
+                "email": r.email,
                 "role": r.role,
                 "active": bool(r.active),
                 "created_at": r.created_at,
@@ -411,6 +406,7 @@ def create_user(
     request: Request,
     name: str = Form(...),
     username: str = Form(...),
+    email: str = Form(""),
     password: str = Form(...),
     role: str = Form(...),
     active: bool = Form(False),
@@ -431,11 +427,12 @@ def create_user(
             raise HTTPException(status_code=400, detail="Usuário já existe")
 
         db.execute(text("""
-            INSERT INTO users (name, username, password, role, active)
-            VALUES (:name, :username, :password, :role, :active)
+            INSERT INTO users (name, username, email, password, role, active)
+            VALUES (:name, :username, :email, :password, :role, :active)
         """), {
             "name": name.strip(),
             "username": username.strip(),
+            "email": email.strip(),
             "password": password.strip(),
             "role": role,
             "active": 1 if active else 0,
@@ -454,7 +451,7 @@ def edit_user_form(request: Request, user_id: int):
     db = SessionLocal()
     try:
         row = db.execute(text("""
-            SELECT id, name, username, role, active
+            SELECT id, name, username, email, role, active
             FROM users
             WHERE id = :id
         """), {"id": user_id}).fetchone()
@@ -466,6 +463,7 @@ def edit_user_form(request: Request, user_id: int):
             "id": row.id,
             "name": row.name,
             "username": row.username,
+            "email": row.email,
             "role": row.role,
             "active": bool(row.active),
         }
@@ -488,6 +486,7 @@ def update_user(
     user_id: int,
     name: str = Form(...),
     username: str = Form(...),
+    email: str = Form(""),
     password: str = Form(""),
     role: str = Form(...),
     active: bool = Form(False),
@@ -505,6 +504,7 @@ def update_user(
                 UPDATE users
                 SET name = :name,
                     username = :username,
+                    email = :email,
                     password = :password,
                     role = :role,
                     active = :active
@@ -513,6 +513,7 @@ def update_user(
                 "id": user_id,
                 "name": name.strip(),
                 "username": username.strip(),
+                "email": email.strip(),
                 "password": password.strip(),
                 "role": role,
                 "active": 1 if active else 0,
@@ -522,6 +523,7 @@ def update_user(
                 UPDATE users
                 SET name = :name,
                     username = :username,
+                    email = :email,
                     role = :role,
                     active = :active
                 WHERE id = :id
@@ -529,6 +531,7 @@ def update_user(
                 "id": user_id,
                 "name": name.strip(),
                 "username": username.strip(),
+                "email": email.strip(),
                 "role": role,
                 "active": 1 if active else 0,
             })
