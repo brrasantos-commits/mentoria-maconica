@@ -420,7 +420,7 @@ async def study_material(
     material_id: int,
     db: Session = Depends(get_db)
 ):
-    """Display a specific study material"""
+    """Display a specific study material - redirects to PDF viewer for PDFs"""
     if not is_user_logged(request):
         return _login_redirect()
 
@@ -431,6 +431,11 @@ async def study_material(
 
     add_selected_material(request, material["filename"])
 
+    # For PDFs, redirect directly to protected viewer
+    if material.get("type") == "pdf":
+        return RedirectResponse(url=f"/estudo/pdf/{material_id}", status_code=303)
+
+    # For other types, show the material page
     return templates.TemplateResponse(
         "study_material.html",
         {
