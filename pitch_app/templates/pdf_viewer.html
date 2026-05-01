@@ -69,6 +69,69 @@
     font-weight: 600;
     min-width: 80px;
     text-align: center;
+    font-size: 14px;
+  }
+
+  /* Zoom Controls */
+  .zoom-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    padding: 8px;
+    border-radius: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    z-index: 10;
+  }
+
+  .zoom-controls button {
+    background: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    min-width: 36px;
+    transition: 0.2s;
+  }
+
+  .zoom-controls button:hover {
+    background: #e5e7eb;
+    transform: scale(1.05);
+  }
+
+  .zoom-controls span {
+    color: #fff;
+    font-weight: 600;
+    padding: 0 8px;
+    min-width: 55px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  /* Fullscreen Button */
+  .fullscreen-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 10;
+    transition: 0.2s;
+  }
+
+  .fullscreen-btn:hover {
+    background: rgba(0,0,0,0.9);
+    transform: scale(1.05);
   }
 
   .pdf-loading {
@@ -102,14 +165,23 @@
     </div>
   </div>
 
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
-    <a class="secondary-btn" href="/estudo">← Voltar para estudo</a>
-    <a class="secondary-btn" href="/pitch">Continuar para pitch →</a>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+    <a class="secondary-btn" style="padding:8px 12px; font-size:14px;" href="/estudo">← Voltar</a>
+    <a class="secondary-btn" style="padding:8px 12px; font-size:14px;" href="/pitch">Pitch →</a>
   </div>
 
-  <div class="pdf-viewer-container" oncontextmenu="return false;">
+  <div class="pdf-viewer-container" id="pdf-container" oncontextmenu="return false;">
+    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="Pressione F para tela cheia">⛶ Tela Cheia</button>
+    
+    <div class="zoom-controls">
+      <button onclick="zoomOut()" title="Diminuir zoom (-)">−</button>
+      <span id="zoom-level">100%</span>
+      <button onclick="zoomIn()" title="Aumentar zoom (+)">+</button>
+      <button onclick="resetZoom()" title="Resetar zoom (0)">↻</button>
+    </div>
+
     <div class="pdf-loading" id="pdf-loading">Carregando PDF...</div>
-    <div class="pdf-canvas-wrapper">
+    <div class="pdf-canvas-wrapper" id="canvas-wrapper">
       <canvas id="pdf-canvas"></canvas>
     </div>
     <div class="pdf-controls">
@@ -142,7 +214,7 @@
   let pageNum = 1;
   let pageRendering = false;
   let pageNumPending = null;
-  const scale = 1.5;
+  let scale = 1.5;
   const canvas = document.getElementById('pdf-canvas');
   const ctx = canvas.getContext('2d');
 
@@ -210,5 +282,85 @@
     pageNum++;
     queueRenderPage(pageNum);
   }
+
+  // Zoom functions
+  function updateZoomDisplay() {
+    document.getElementById('zoom-level').textContent = Math.round(scale * 100 / 1.5) + '%';
+  }
+
+  function zoomIn() {
+    scale += 0.25;
+    if (scale > 4.0) scale = 4.0;
+    updateZoomDisplay();
+    renderPage(pageNum);
+  }
+
+  function zoomOut() {
+    scale -= 0.25;
+    if (scale < 0.5) scale = 0.5;
+    updateZoomDisplay();
+    renderPage(pageNum);
+  }
+
+  function resetZoom() {
+    scale = 1.5;
+    updateZoomDisplay();
+    renderPage(pageNum);
+  }
+
+  // Fullscreen function
+  function toggleFullscreen() {
+    const container = document.getElementById('pdf-container');
+    
+    if (!document.fullscreenElement) {
+      container.requestFullscreen().catch(err => {
+        console.error('Erro ao entrar em tela cheia:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // Update zoom display on load
+  updateZoomDisplay();
+
+  // Enhanced keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    // Block save shortcuts
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p')) {
+      e.preventDefault();
+      return false;
+    }
+    
+    // Navigation shortcuts
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prevPage();
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      nextPage();
+    }
+    
+    // Zoom shortcuts
+    if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
+      e.preventDefault();
+      zoomIn();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+      e.preventDefault();
+      zoomOut();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+      e.preventDefault();
+      resetZoom();
+    }
+    
+    // Fullscreen shortcut
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+  });
 </script>
 {% endblock %}
