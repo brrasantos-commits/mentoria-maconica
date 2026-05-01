@@ -213,6 +213,34 @@ async def health_check():
     }
 
 
+@app.get("/debug/db-schema")
+async def debug_db_schema(db: Session = Depends(get_db)):
+    """Debug endpoint to check database schema"""
+    try:
+        # Check users table columns
+        users_columns = db.execute(text("PRAGMA table_info(users)")).fetchall()
+        users_schema = {col[1]: col[2] for col in users_columns}
+        
+        # Check if reset columns exist
+        has_reset_columns = all([
+            "email" in users_schema,
+            "reset_token" in users_schema,
+            "reset_token_expiry" in users_schema
+        ])
+        
+        return {
+            "status": "ok",
+            "users_columns": users_schema,
+            "has_reset_columns": has_reset_columns,
+            "migration_needed": not has_reset_columns
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page - redirect based on login status"""
