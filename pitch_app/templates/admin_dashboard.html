@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard de Uso | Admin{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .stat-card.openai {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+
+  .stat-card.sendgrid {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  }
+
+  .stat-card.railway {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  }
+
+  .stat-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 8px 0;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+
+  .chart-container {
+    background: white;
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+  }
+
+  .chart-container h3 {
+    margin: 0 0 20px 0;
+    color: #1f2937;
+    font-size: 18px;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    height: 300px;
+  }
+
+  .operations-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+  }
+
+  .operations-table th,
+  .operations-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .operations-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .operations-table tr:hover {
+    background: #f9fafb;
+  }
+
+  .cost-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .cost-high {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .cost-medium {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .cost-low {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .period-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .period-btn {
+    padding: 8px 16px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .period-btn:hover {
+    border-color: #6366f1;
+    color: #6366f1;
+  }
+
+  .period-btn.active {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>📊 Dashboard de Uso</h2>
+      <p>Monitoramento de consumo de APIs e recursos (últimos 30 dias)</p>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <a class="secondary-btn" href="/admin/materials">← Voltar para Materiais</a>
+    <a class="secondary-btn" href="/admin/users">Usuários</a>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="dashboard-grid">
+    <div class="stat-card openai">
+      <h3>🤖 OpenAI</h3>
+      <div class="stat-value">{{ "{:,.0f}".format(summary.get('openai', {}).get('total_tokens', 0)) }}</div>
+      <div class="stat-label">Tokens usados</div>
+      <div class="stat-label" style="margin-top: 8px; font-size: 18px; font-weight: 600;">
+        ${{ "{:.2f}".format(summary.get('openai', {}).get('total_cost', 0)) }}
+      </div>
+    </div>
+
+    <div class="stat-card sendgrid">
+      <h3>📧 SendGrid</h3>
+      <div class="stat-value">{{ summary.get('sendgrid', {}).get('count', 0) }}</div>
+      <div class="stat-label">Emails enviados</div>
+      <div class="stat-label" style="margin-top: 8px; font-size: 18px; font-weight: 600;">
+        ${{ "{:.2f}".format(summary.get('sendgrid', {}).get('total_cost', 0)) }}
+      </div>
+    </div>
+
+    <div class="stat-card railway">
+      <h3>🚂 Railway</h3>
+      <div class="stat-value">{{ summary.get('railway', {}).get('count', 0) }}</div>
+      <div class="stat-label">Operações registradas</div>
+      <div class="stat-label" style="margin-top: 8px; font-size: 18px; font-weight: 600;">
+        ${{ "{:.2f}".format(summary.get('railway', {}).get('total_cost', 0)) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenAI Usage Chart -->
+  <div class="chart-container">
+    <h3>📈 Uso Diário - OpenAI</h3>
+    <div class="chart-wrapper">
+      <canvas id="openaiChart"></canvas>
+    </div>
+  </div>
+
+  <!-- SendGrid Usage Chart -->
+  <div class="chart-container">
+    <h3>📧 Emails Enviados - SendGrid</h3>
+    <div class="chart-wrapper">
+      <canvas id="sendgridChart"></canvas>
+    </div>
+  </div>
+
+  <!-- OpenAI Operations Breakdown -->
+  <div class="chart-container">
+    <h3>🔍 Detalhamento de Operações - OpenAI</h3>
+    <table class="operations-table">
+      <thead>
+        <tr>
+          <th>Operação</th>
+          <th>Quantidade</th>
+          <th>Tokens</th>
+          <th>Custo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for op in openai_operations %}
+        <tr>
+          <td>{{ op.operation }}</td>
+          <td>{{ op.count }}</td>
+          <td>{{ "{:,.0f}".format(op.tokens) }}</td>
+          <td>
+            {% if op.cost > 1.0 %}
+            <span class="cost-badge cost-high">${{ "{:.2f}".format(op.cost) }}</span>
+            {% elif op.cost > 0.1 %}
+            <span class="cost-badge cost-medium">${{ "{:.2f}".format(op.cost) }}</span>
+            {% else %}
+            <span class="cost-badge cost-low">${{ "{:.2f}".format(op.cost) }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not openai_operations %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: #9ca3af; padding: 24px;">
+            Nenhuma operação registrada no período
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SendGrid Operations Breakdown -->
+  <div class="chart-container">
+    <h3>📬 Detalhamento de Emails - SendGrid</h3>
+    <table class="operations-table">
+      <thead>
+        <tr>
+          <th>Tipo de Email</th>
+          <th>Quantidade</th>
+          <th>Custo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for op in sendgrid_operations %}
+        <tr>
+          <td>{{ op.operation }}</td>
+          <td>{{ op.count }}</td>
+          <td>
+            <span class="cost-badge cost-low">${{ "{:.2f}".format(op.cost) }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not sendgrid_operations %}
+        <tr>
+          <td colspan="3" style="text-align: center; color: #9ca3af; padding: 24px;">
+            Nenhum email enviado no período
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // OpenAI Daily Usage Chart
+  const openaiData = {{ openai_daily | tojson }};
+  const openaiDates = openaiData.map(d => d.date);
+  const openaiCosts = openaiData.map(d => d.cost);
+  const openaiTokens = openaiData.map(d => d.tokens);
+
+  const openaiCtx = document.getElementById('openaiChart').getContext('2d');
+  new Chart(openaiCtx, {
+    type: 'line',
+    data: {
+      labels: openaiDates,
+      datasets: [{
+        label: 'Custo (USD)',
+        data: openaiCosts,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y'
+      }, {
+        label: 'Tokens (milhares)',
+        data: openaiTokens.map(t => t / 1000),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y1'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: true,
+            text: 'Custo (USD)'
+          }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: 'Tokens (milhares)'
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+        },
+      }
+    }
+  });
+
+  // SendGrid Daily Usage Chart
+  const sendgridData = {{ sendgrid_daily | tojson }};
+  const sendgridDates = sendgridData.map(d => d.date);
+  const sendgridCounts = sendgridData.map(d => d.count);
+
+  const sendgridCtx = document.getElementById('sendgridChart').getContext('2d');
+  new Chart(sendgridCtx, {
+    type: 'bar',
+    data: {
+      labels: sendgridDates,
+      datasets: [{
+        label: 'Emails Enviados',
+        data: sendgridCounts,
+        backgroundColor: '#3b82f6',
+        borderColor: '#2563eb',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

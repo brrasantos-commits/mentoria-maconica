@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, func
 from pitch_app.db import Base
 
 
@@ -26,4 +26,16 @@ class User(Base):
     password = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default="seller")  # seller | admin
     active = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, server_default=func.current_timestamp(), nullable=False)
+
+class UsageLog(Base):
+    __tablename__ = "usage_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service = Column(String(50), nullable=False)  # openai, sendgrid, railway
+    operation = Column(String(100), nullable=False)  # transcription, evaluation, email_sent, etc
+    user_id = Column(Integer, nullable=True)
+    tokens_used = Column(Integer, nullable=True)  # For OpenAI
+    cost_usd = Column(Float, nullable=True)  # Estimated cost
+    metadata = Column(Text, nullable=True)  # JSON with additional info
     created_at = Column(DateTime, server_default=func.current_timestamp(), nullable=False)

@@ -1,12 +1,14 @@
 import smtplib
 import logging
 from email.mime.text import MIMEText
+from typing import Optional
 import os
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 
-def send_reset_email(to_email: str, reset_link: str):
+def send_reset_email(to_email: str, reset_link: str, db: Optional[Session] = None, user_id: Optional[int] = None):
     """
     Send password reset email using SendGrid or SMTP
     Tries SendGrid first (works on Railway), falls back to SMTP
@@ -15,13 +17,13 @@ def send_reset_email(to_email: str, reset_link: str):
     # Try SendGrid first (recommended for Railway)
     sendgrid_key = os.getenv("SENDGRID_API_KEY")
     if sendgrid_key:
-        return _send_via_sendgrid(to_email, reset_link, sendgrid_key)
+        return _send_via_sendgrid(to_email, reset_link, sendgrid_key, db, user_id)
     
     # Fallback to SMTP
-    return _send_via_smtp(to_email, reset_link)
+    return _send_via_smtp(to_email, reset_link, db, user_id)
 
 
-def _send_via_sendgrid(to_email: str, reset_link: str, api_key: str):
+def _send_via_sendgrid(to_email: str, reset_link: str, api_key: str, db: Optional[Session] = None, user_id: Optional[int] = None):
     """Send email via SendGrid API"""
     try:
         from sendgrid import SendGridAPIClient
@@ -88,6 +90,19 @@ def _send_via_sendgrid(to_email: str, reset_link: str, api_key: str):
         sg = SendGridAPIClient(api_key)
         response = sg.send(message)
         
+        # Log usage
+        if db:
+            try:
+                from pitch_app.services.usage_tracking_service import log_sendgrid_usage
+                log_sendgrid_usage(
+                    db=db,
+                    operation="password_reset_email",
+                    user_id=user_id,
+                    metadata={"to_email": to_email, "status_code": response.status_code}
+                )
+            except Exception as log_error:
+                logger.warning(f"Failed to log SendGrid usage: {log_error}")
+        
         logger.info(f"Reset email sent via SendGrid to {to_email} (status: {response.status_code})")
         return True
         
@@ -96,7 +111,7 @@ def _send_via_sendgrid(to_email: str, reset_link: str, api_key: str):
         raise
 
 
-def _send_via_smtp(to_email: str, reset_link: str):
+def _send_via_smtp(to_email: str, reset_link: str, db: Optional[Session] = None, user_id: Optional[int] = None):
     """Send email via SMTP (fallback)"""
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = int(os.getenv("SMTP_PORT", 587))

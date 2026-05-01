@@ -614,3 +614,167 @@ async def bulk_import_submit(request: Request):
         url=f"/admin/materials?imported={result['imported']}&skipped={result['skipped']}&errors={len(result['errors'])}",
         status_code=303
     )
+
+
+
+# ============================================================================
+# USAGE DASHBOARD ROUTES
+# ============================================================================
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    """Display usage dashboard"""
+    _admin_only(request)
+    from pitch_app.services.usage_tracking_service import (
+        get_usage_summary,
+        get_daily_usage,
+        get_operation_breakdown
+    )
+    
+    db = SessionLocal()
+    try:
+        # Get summary for last 30 days
+        summary = get_usage_summary(db, days=30)
+        
+        # Get daily data for each service
+        openai_daily = get_daily_usage(db, "openai", days=30)
+        sendgrid_daily = get_daily_usage(db, "sendgrid", days=30)
+        railway_daily = get_daily_usage(db, "railway", days=30)
+        
+        # Get operation breakdown
+        openai_operations = get_operation_breakdown(db, "openai", days=30)
+        sendgrid_operations = get_operation_breakdown(db, "sendgrid", days=30)
+        
+        from fastapi.templating import Jinja2Templates
+        templates = Jinja2Templates(directory="pitch_app/templates")
+        
+        return templates.TemplateResponse(
+            "admin_dashboard.html",
+            {
+                "request": request,
+                "summary": summary,
+                "openai_daily": openai_daily,
+                "sendgrid_daily": sendgrid_daily,
+                "railway_daily": railway_daily,
+                "openai_operations": openai_operations,
+                "sendgrid_operations": sendgrid_operations,
+            }
+        )
+    finally:
+        db.close()
+
+
+@router.get("/dashboard/api/summary")
+async def get_dashboard_summary(request: Request, days: int = 30):
+    """API endpoint to get usage summary"""
+    _admin_only(request)
+    from pitch_app.services.usage_tracking_service import get_usage_summary
+    
+    db = SessionLocal()
+    try:
+        summary = get_usage_summary(db, days=days)
+        return {"success": True, "data": summary}
+    finally:
+        db.close()
+
+
+@router.get("/dashboard/api/daily/{service}")
+async def get_dashboard_daily(request: Request, service: str, days: int = 30):
+    """API endpoint to get daily usage for a service"""
+    _admin_only(request)
+    from pitch_app.services.usage_tracking_service import get_daily_usage
+    
+    db = SessionLocal()
+    try:
+        daily_data = get_daily_usage(db, service, days=days)
+        return {"success": True, "data": daily_data}
+    finally:
+        db.close()
+
+
+
+# ============================================================================
+# MULTI-UPLOAD ROUTES
+# ============================================================================
+
+@router.get("/materials/multi-upload", response_class=HTMLResponse)
+async def multi_upload_page(request: Request):
+    """Display multi-upload page"""
+    _admin_only(request)
+    
+    return request.app.state.templates.TemplateResponse(
+        "admin_multi_upload.html",
+        {
+            "request": request,
+            "industry_options": INDUSTRY_OPTIONS,
+            "solution_options": SOLUTION_OPTIONS,
+        },
+    )
+
+
+@router.post("/materials/upload-single")
+async def upload_single_file(
+    request: Request,
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    industry: str = Form(...),
+    solution: str = Form(...),
+    description: str = Form("")
+):
+    """Upload a single file (used by multi-upload)"""
+    _admin_only(request)
+    
+    # Validate file type
+    file_ext = Path(file.filename or "").suffix.lower().lstrip(".")
+    if file_ext not in ["pdf", "mp4", "webm", "mov", "avi", "mkv"]:
+        raise HTTPException(status_code=400, detail=f"Tipo de arquivo não suportado: {file_ext}")
+    
+    # Save file
+    file_path = MATERIALS_DIR / file.filename
+    
+    # Check if file already exists
+    if file_path.exists():
+        raise HTTPException(status_code=400, detail=f"Arquivo já existe: {file.filename}")
+    
+    try:
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar arquivo: {str(e)}")
+    
+    # Insert into database
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            INSERT INTO materials (title, filename, file_type, industry, solution, description, sort_order, active)
+            VALUES (:title, :filename, :file_type, :industry, :solution, :description, 0, 1)
+        """), {
+            "title": title.strip(),
+            "filename": file.filename,
+            "file_type": file_ext,
+            "industry": industry.strip(),
+            "solution": solution.strip(),
+            "description": description.strip() if description else ""
+        })
+        db.commit()
+        
+        # Process material (transcription/summary if applicable)
+        material_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
+        if material_id:
+            try:
+                process_material_on_upload(material_id, file.filename, file_ext)
+            except Exception as e:
+                # Don't fail the upload if processing fails
+                print(f"Warning: Failed to process material {material_id}: {e}")
+        
+        return {"success": True, "message": f"Arquivo {file.filename} enviado com sucesso"}
+        
+    except Exception as e:
+        db.rollback()
+        # Remove file if database insert failed
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar no banco: {str(e)}")
+    finally:
+        db.close()
