@@ -63,10 +63,19 @@ def create_submission_paths(seller_name: str, video_filename: str) -> Submission
         feedback_path=root / "feedback.txt",
     )
 
-def save_upload(file: UploadFile, destination: Path) -> Path:
+def save_upload(file, destination: Path) -> Path:
+    """
+    Save uploaded file to destination.
+    Accepts both UploadFile and SimpleNamespace (for background tasks)
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Handle both UploadFile and SimpleNamespace
+    file_obj = getattr(file, 'file', file)
+    
     with destination.open('wb') as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(file_obj, buffer)
+    
     return destination
 
 def read_txt(path: Path) -> str:
