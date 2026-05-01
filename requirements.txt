@@ -10,6 +10,7 @@ moviepy==1.0.3
 scikit-learn==1.5.0
 numpy==1.26.4
 python-dotenv==1.0.1
-itsdangerous
-SQLAlchemy
-python-dotenv
+itsdangerous==2.1.2
+SQLAlchemy==2.0.23
+passlib[bcrypt]==1.7.4
+slowapi==0.1.9

@@ -1,24 +1,33 @@
 import os
+import logging
 from pathlib import Path
 from io import BytesIO
 from types import SimpleNamespace
+from datetime import datetime
 
-import uuid
-from datetime import datetime, timedelta
-from pitch_app.services.email_service import send_reset_email
-
-from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from sqlalchemy import text
+from sqlalchemy.orm import Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from pitch_app.admin_routes import router as admin_router
 from pitch_app.db import init_db, SessionLocal, migrate_db
 from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
+from pitch_app.services.auth_service import authenticate_user, create_reset_token, reset_password_with_token
+from pitch_app.services.material_service import list_materials, get_material_by_id, get_filter_options
+from pitch_app.services.session_service import (
+    get_selected_materials, set_selected_materials, add_selected_material,
+    remove_selected_material, clear_selected_materials, is_user_logged,
+    set_user_session, clear_user_session
+)
+from pitch_app.services.email_service import send_reset_email
 
 from pitch_app.services.config import (
     TEMPLATES_DIR,
@@ -27,16 +36,33 @@ from pitch_app.services.config import (
     MAX_VIDEO_SIZE_MB,
 )
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 (STATIC_DIR / "css").mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Sales Pitch AI V4")
 
+# Validate required environment variables
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY")
+if not SESSION_SECRET_KEY:
+    raise ValueError("SESSION_SECRET_KEY environment variable must be set")
+
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET_KEY", "fallback-secret"),
+    secret_key=SESSION_SECRET_KEY,
 )
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.state.templates = templates
@@ -46,135 +72,62 @@ app.mount("/materials", StaticFiles(directory=str(MATERIALS_DIR)), name="materia
 
 app.include_router(admin_router)
 
-SESSION_MATERIALS_KEY = "selected_materials"
-SESSION_USER_KEY = "user_logged"
+
+# Database dependency
+def get_db():
+    """Database session dependency"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def _login_redirect():
+    """Helper to redirect to login page"""
+    return RedirectResponse(url="/login", status_code=303)
+
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions"""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Please try again later."}
+    )
 
 
 @app.on_event("startup")
 def on_startup():
+    """Initialize database and run migrations on startup"""
+    logger.info("Starting application...")
     init_db()
     migrate_db()
+    logger.info("Application started successfully")
 
 
-def _is_user_logged(request: Request) -> bool:
-    return bool(request.session.get(SESSION_USER_KEY))
+@app.on_event("shutdown")
+def on_shutdown():
+    """Cleanup on shutdown"""
+    logger.info("Shutting down application...")
 
 
-def _login_redirect():
-    return RedirectResponse(url="/login", status_code=303)
-
-
-def _get_selected_materials(request: Request) -> list[str]:
-    items = request.session.get(SESSION_MATERIALS_KEY, [])
-    if not isinstance(items, list):
-        return []
-
-    cleaned = []
-    seen = set()
-
-    for item in items:
-        if isinstance(item, str):
-            value = item.strip()
-            if value and value not in seen:
-                seen.add(value)
-                cleaned.append(value)
-
-    return cleaned
-
-
-def _set_selected_materials(request: Request, items: list[str]) -> list[str]:
-    cleaned = []
-    seen = set()
-
-    for item in items:
-        if isinstance(item, str):
-            value = item.strip()
-            if value and value not in seen:
-                seen.add(value)
-                cleaned.append(value)
-
-    request.session[SESSION_MATERIALS_KEY] = cleaned
-    return cleaned
-
-
-def _add_selected_material(request: Request, filename: str) -> list[str]:
-    current = _get_selected_materials(request)
-    value = (filename or "").strip()
-
-    if value and value not in current:
-        current.append(value)
-
-    return _set_selected_materials(request, current)
-
-
-def _remove_selected_material(request: Request, filename: str) -> list[str]:
-    value = (filename or "").strip()
-    current = [item for item in _get_selected_materials(request) if item != value]
-    return _set_selected_materials(request, current)
-
-
-def _list_materials(industry: str = "all", solution: str = "all"):
-    db = SessionLocal()
-    try:
-        rows = db.execute(text("""
-            SELECT id, title, filename, file_type, industry, solution, description, sort_order, active
-            FROM materials
-            ORDER BY sort_order ASC, id ASC
-        """)).fetchall()
-
-        materials = []
-
-        for r in rows:
-            if not bool(r.active):
-                continue
-
-            item = {
-                "id": r.id,
-                "slug": f"{r.id}",
-                "title": r.title,
-                "filename": r.filename,
-                "type": (r.file_type or Path(r.filename).suffix.lower().lstrip(".")),
-                "industry": r.industry,
-                "solution": r.solution,
-                "description": r.description,
-                "sort_order": r.sort_order,
-                "active": bool(r.active),
-                "path": f"/materials/{r.filename}",
-            }
-
-            if industry != "all" and item["industry"] != industry:
-                continue
-
-            if solution != "all" and item["solution"] != solution:
-                continue
-
-            materials.append(item)
-
-        return materials
-    finally:
-        db.close()
-
-
-def _filter_options():
-    db = SessionLocal()
-    try:
-        rows = db.execute(text("""
-            SELECT DISTINCT industry, solution
-            FROM materials
-            WHERE active = 1
-        """)).fetchall()
-
-        industry_options = sorted({r.industry for r in rows if r.industry})
-        solution_options = sorted({r.solution for r in rows if r.solution})
-
-        return industry_options, solution_options
-    finally:
-        db.close()
-
-
-def _validate_video_upload(video: UploadFile):
+def _validate_video_upload(video: UploadFile, request: Request):
+    """Validate video upload with optimized size check"""
     if not video or not video.filename:
         raise HTTPException(status_code=400, detail="Vídeo do pitch é obrigatório.")
+
+    # Check content-length header first (more efficient)
+    content_length = request.headers.get("content-length")
+    max_size_bytes = MAX_VIDEO_SIZE_MB * 1024 * 1024
+    
+    if content_length and int(content_length) > max_size_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Arquivo muito grande. Máximo permitido: {MAX_VIDEO_SIZE_MB}MB."
+        )
 
     allowed_extensions = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
     ext = Path(video.filename).suffix.lower()
@@ -185,17 +138,17 @@ def _validate_video_upload(video: UploadFile):
             detail="Formato de vídeo não suportado. Use MP4, MOV, AVI, MKV ou WEBM."
         )
 
-    max_size_bytes = MAX_VIDEO_SIZE_MB * 1024 * 1024
+    # Fallback: check actual file size if header not available
+    if not content_length:
+        video.file.seek(0, 2)
+        file_size = video.file.tell()
+        video.file.seek(0)
 
-    video.file.seek(0, 2)
-    file_size = video.file.tell()
-    video.file.seek(0)
-
-    if file_size > max_size_bytes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Arquivo muito grande. Máximo permitido: {MAX_VIDEO_SIZE_MB}MB."
-        )
+        if file_size > max_size_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Arquivo muito grande. Máximo permitido: {MAX_VIDEO_SIZE_MB}MB."
+            )
 
 
 def _run_analysis_job(
@@ -205,6 +158,7 @@ def _run_analysis_job(
     video_bytes: bytes,
     materials: list[str],
 ):
+    """Background task to run pitch analysis"""
     try:
         fake_upload = SimpleNamespace(
             filename=video_filename,
@@ -228,6 +182,7 @@ def _run_analysis_job(
         )
 
     except AppError as exc:
+        logger.error(f"AppError in job {job_id}: {exc.message}")
         update_job(
             job_id,
             status="error",
@@ -236,7 +191,8 @@ def _run_analysis_job(
             message=exc.message,
         )
 
-    except Exception:
+    except Exception as exc:
+        logger.error(f"Unexpected error in job {job_id}: {exc}", exc_info=True)
         update_job(
             job_id,
             status="error",
@@ -246,15 +202,28 @@ def _run_analysis_job(
         )
 
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "4.0"
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    if _is_user_logged(request):
+    """Home page - redirect based on login status"""
+    if is_user_logged(request):
         return RedirectResponse(url="/estudo", status_code=303)
     return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request):
+    """Display login form"""
     return templates.TemplateResponse(
         "login.html",
         {"request": request, "error": None},
@@ -262,34 +231,23 @@ async def login_form(request: Request):
 
 
 @app.post("/login", response_class=HTMLResponse)
-async def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    db = SessionLocal()
+@limiter.limit("5/minute")
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Handle login with rate limiting"""
+    user = authenticate_user(db, username, password)
 
-    try:
-        user = db.execute(text("""
-            SELECT id, name, username, role, active
-            FROM users
-            WHERE username = :username
-              AND password = :password
-              AND active = 1
-        """), {
-            "username": username,
-            "password": password
-        }).fetchone()
+    if user:
+        set_user_session(request, user["id"], user["name"], user["role"])
 
-        if user:
-            request.session[SESSION_USER_KEY] = True
-            request.session["user_id"] = user.id
-            request.session["user_name"] = user.name
-            request.session["user_role"] = user.role
+        if user["role"] == "admin":
+            return RedirectResponse(url="/admin/materials", status_code=303)
 
-            if user.role == "admin":
-                return RedirectResponse(url="/admin/materials", status_code=303)
-
-            return RedirectResponse(url="/estudo", status_code=303)
-
-    finally:
-        db.close()
+        return RedirectResponse(url="/estudo", status_code=303)
 
     return templates.TemplateResponse(
         "login.html",
@@ -297,10 +255,10 @@ async def login(request: Request, username: str = Form(...), password: str = For
         status_code=401,
     )
 
-# 🔥 RESET DE SENHA
 
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_form(request: Request):
+    """Display forgot password form"""
     return templates.TemplateResponse(
         "forgot_password.html",
         {"request": request}
@@ -308,45 +266,29 @@ async def forgot_password_form(request: Request):
 
 
 @app.post("/forgot-password")
-async def forgot_password(request: Request, email: str = Form(...)):
-    import uuid
-    from datetime import datetime, timedelta
-    from pitch_app.services.email_service import send_reset_email
+@limiter.limit("3/hour")
+async def forgot_password(
+    request: Request,
+    email: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Handle forgot password with rate limiting"""
+    token = create_reset_token(db, email)
 
-    db = SessionLocal()
-
-    try:
-        user = db.execute(text("""
-            SELECT id FROM users WHERE email = :email
-        """), {"email": email}).fetchone()
-
-        if user:
-            token = uuid.uuid4().hex
-            expiry = datetime.utcnow() + timedelta(hours=1)
-
-            db.execute(text("""
-                UPDATE users
-                SET reset_token = :token,
-                    reset_token_expiry = :expiry
-                WHERE id = :id
-            """), {
-                "token": token,
-                "expiry": expiry.isoformat(),
-                "id": user.id
-            })
-            db.commit()
-
-            reset_link = f"{request.base_url}reset-password?token={token}"
+    if token:
+        reset_link = f"{request.base_url}reset-password?token={token}"
+        try:
             send_reset_email(email, reset_link)
+        except Exception as e:
+            logger.error(f"Failed to send reset email to {email}: {e}")
 
-    finally:
-        db.close()
-
+    # Always return success to prevent email enumeration
     return HTMLResponse("Se o e-mail existir, você receberá instruções.")
 
 
 @app.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_form(request: Request, token: str):
+    """Display reset password form"""
     return templates.TemplateResponse(
         "reset_password.html",
         {"request": request, "token": token}
@@ -354,57 +296,40 @@ async def reset_password_form(request: Request, token: str):
 
 
 @app.post("/reset-password")
-async def reset_password(token: str = Form(...), new_password: str = Form(...)):
-    from datetime import datetime
+async def reset_password(
+    token: str = Form(...),
+    new_password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Handle password reset"""
+    success = reset_password_with_token(db, token, new_password)
 
-    db = SessionLocal()
-
-    try:
-        user = db.execute(text("""
-            SELECT id, reset_token_expiry
-            FROM users
-            WHERE reset_token = :token
-        """), {"token": token}).fetchone()
-
-        if not user:
-            raise HTTPException(status_code=400, detail="Token inválido")
-
-        expiry = datetime.fromisoformat(user.reset_token_expiry)
-
-        if datetime.utcnow() > expiry:
-            raise HTTPException(status_code=400, detail="Token expirado")
-
-        db.execute(text("""
-            UPDATE users
-            SET password = :password,
-                reset_token = NULL,
-                reset_token_expiry = NULL
-            WHERE id = :id
-        """), {
-            "password": new_password,
-            "id": user.id
-        })
-
-        db.commit()
-
-    finally:
-        db.close()
+    if not success:
+        raise HTTPException(status_code=400, detail="Token inválido ou expirado")
 
     return HTMLResponse("Senha alterada com sucesso!")
 
+
 @app.get("/logout")
 async def logout(request: Request):
-    request.session.clear()
+    """Handle logout"""
+    clear_user_session(request)
     return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/estudo", response_class=HTMLResponse)
-async def study_index(request: Request, industry: str = "all", solution: str = "all"):
-    if not _is_user_logged(request):
+async def study_index(
+    request: Request,
+    industry: str = "all",
+    solution: str = "all",
+    db: Session = Depends(get_db)
+):
+    """Display study materials index with filters"""
+    if not is_user_logged(request):
         return _login_redirect()
 
-    materials = _list_materials(industry=industry, solution=solution)
-    industry_options, solution_options = _filter_options()
+    materials = list_materials(db, industry=industry, solution=solution)
+    industry_options, solution_options = get_filter_options()
 
     return templates.TemplateResponse(
         "index.html",
@@ -415,71 +340,55 @@ async def study_index(request: Request, industry: str = "all", solution: str = "
             "solution_options": solution_options,
             "current_industry": industry,
             "current_solution": solution,
-            "selected_materials": _get_selected_materials(request),
+            "selected_materials": get_selected_materials(request),
         },
     )
 
 
 @app.get("/estudo/{material_id}", response_class=HTMLResponse)
-async def study_material(request: Request, material_id: int):
-    if not _is_user_logged(request):
+async def study_material(
+    request: Request,
+    material_id: int,
+    db: Session = Depends(get_db)
+):
+    """Display a specific study material"""
+    if not is_user_logged(request):
         return _login_redirect()
 
-    db = SessionLocal()
+    material = get_material_by_id(db, material_id)
 
-    try:
-        row = db.execute(text("""
-            SELECT id, title, filename, file_type, industry, solution, description, sort_order, active
-            FROM materials
-            WHERE id = :id AND active = 1
-        """), {"id": material_id}).fetchone()
+    if not material:
+        raise HTTPException(status_code=404, detail="Material não encontrado")
 
-        if not row:
-            raise HTTPException(status_code=404, detail="Material não encontrado")
-
-        material = {
-            "id": row.id,
-            "slug": f"{row.id}",
-            "title": row.title,
-            "filename": row.filename,
-            "type": (row.file_type or Path(row.filename).suffix.lower().lstrip(".")),
-            "industry": row.industry,
-            "solution": row.solution,
-            "description": row.description,
-            "sort_order": row.sort_order,
-            "active": bool(row.active),
-            "path": f"/materials/{row.filename}",
-        }
-    finally:
-        db.close()
-
-    _add_selected_material(request, material["filename"])
+    add_selected_material(request, material["filename"])
 
     return templates.TemplateResponse(
         "study_material.html",
         {
             "request": request,
             "material": material,
-            "selected_materials": _get_selected_materials(request),
+            "selected_materials": get_selected_materials(request),
         },
     )
 
 
 @app.post("/estudo/concluir")
 async def study_complete(request: Request):
-    if not _is_user_logged(request):
+    """Complete study phase and redirect to pitch"""
+    if not is_user_logged(request):
         return _login_redirect()
 
     return RedirectResponse(url="/pitch", status_code=303)
 
 
 @app.get("/pitch", response_class=HTMLResponse)
-async def pitch_form(request: Request):
-    if not _is_user_logged(request):
+async def pitch_form(request: Request, db: Session = Depends(get_db)):
+    """Display pitch submission form"""
+    if not is_user_logged(request):
         return _login_redirect()
 
-    materials = _list_materials()
-    industry_options, solution_options = _filter_options()
+    materials = list_materials(db)
+    industry_options, solution_options = get_filter_options()
 
     return templates.TemplateResponse(
         "pitch_form.html",
@@ -488,22 +397,24 @@ async def pitch_form(request: Request):
             "materials": materials,
             "industry_options": industry_options,
             "solution_options": solution_options,
-            "selected_materials": _get_selected_materials(request),
+            "selected_materials": get_selected_materials(request),
         },
     )
 
 
 @app.get("/api/session/materials")
 async def session_materials(request: Request):
-    if not _is_user_logged(request):
+    """Get selected materials from session"""
+    if not is_user_logged(request):
         return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
 
-    return JSONResponse({"materials": _get_selected_materials(request)})
+    return JSONResponse({"materials": get_selected_materials(request)})
 
 
 @app.post("/api/session/materials/add")
 async def session_material_add(request: Request):
-    if not _is_user_logged(request):
+    """Add material to session selection"""
+    if not is_user_logged(request):
         return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
 
     data = await request.json()
@@ -512,13 +423,14 @@ async def session_material_add(request: Request):
     if not filename:
         return JSONResponse(status_code=400, content={"detail": "filename obrigatório"})
 
-    materials = _add_selected_material(request, filename)
+    materials = add_selected_material(request, filename)
     return JSONResponse({"materials": materials})
 
 
 @app.post("/api/session/materials/remove")
 async def session_material_remove(request: Request):
-    if not _is_user_logged(request):
+    """Remove material from session selection"""
+    if not is_user_logged(request):
         return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
 
     data = await request.json()
@@ -527,13 +439,14 @@ async def session_material_remove(request: Request):
     if not filename:
         return JSONResponse(status_code=400, content={"detail": "filename obrigatório"})
 
-    materials = _remove_selected_material(request, filename)
+    materials = remove_selected_material(request, filename)
     return JSONResponse({"materials": materials})
 
 
 @app.post("/api/session/materials/set")
 async def session_material_set(request: Request):
-    if not _is_user_logged(request):
+    """Set materials in session selection"""
+    if not is_user_logged(request):
         return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
 
     data = await request.json()
@@ -542,22 +455,24 @@ async def session_material_set(request: Request):
     if not isinstance(items, list):
         return JSONResponse(status_code=400, content={"detail": "materials deve ser lista"})
 
-    materials = _set_selected_materials(request, items)
+    materials = set_selected_materials(request, items)
     return JSONResponse({"materials": materials})
 
 
 @app.post("/api/session/materials/clear")
 async def session_material_clear(request: Request):
-    if not _is_user_logged(request):
+    """Clear all materials from session selection"""
+    if not is_user_logged(request):
         return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
 
-    request.session[SESSION_MATERIALS_KEY] = []
-    return JSONResponse({"materials": []})
+    materials = clear_selected_materials(request)
+    return JSONResponse({"materials": materials})
 
 
 @app.get("/api/jobs/{job_id}")
 async def job_status(request: Request, job_id: str):
-    if not _is_user_logged(request):
+    """Get job status"""
+    if not is_user_logged(request):
         return JSONResponse(status_code=401, content={"detail": "Usuário não autenticado"})
 
     job = get_job(job_id)
@@ -576,10 +491,11 @@ async def analyze(
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
 ):
-    if not _is_user_logged(request):
+    """Submit pitch for analysis"""
+    if not is_user_logged(request):
         return _login_redirect()
 
-    _validate_video_upload(video)
+    _validate_video_upload(video, request)
 
     video_bytes = await video.read()
     video_filename = video.filename or "video.mp4"
@@ -611,7 +527,8 @@ async def analyze(
 
 @app.get("/analyze/progress/{job_id}", response_class=HTMLResponse)
 async def analyze_progress(request: Request, job_id: str):
-    if not _is_user_logged(request):
+    """Display analysis progress"""
+    if not is_user_logged(request):
         return _login_redirect()
 
     job = get_job(job_id)
@@ -631,7 +548,8 @@ async def analyze_progress(request: Request, job_id: str):
 
 @app.get("/analyze/result/{job_id}", response_class=HTMLResponse)
 async def analyze_result(request: Request, job_id: str):
-    if not _is_user_logged(request):
+    """Display analysis result"""
+    if not is_user_logged(request):
         return _login_redirect()
 
     job = get_job(job_id)
@@ -654,3 +572,5 @@ async def analyze_result(request: Request, job_id: str):
             **result,
         },
     )
+
+# Made with Bob

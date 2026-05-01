@@ -5,5 +5,8 @@ services:
       - "8002:8000"
     env_file: .env
     volumes:
-      - .:/app
+      - ./data:/app/data
+      - ./pitch_app/materials:/app/pitch_app/materials
     restart: unless-stopped
+    environment:
+      - APP_DATA_DIR=/app/data

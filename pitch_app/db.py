@@ -12,6 +12,10 @@ DATABASE_URL = f"sqlite:///{DATA_DIR / 'pitch_app.db'}"
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    echo=False,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -35,23 +39,28 @@ def init_db():
             WHERE id = OLD.id;
         END;
         """))
+    # Criar usuários padrão com senhas hasheadas
+    from pitch_app.services.auth_service import hash_password
+    
     with engine.begin() as conn:
         # criar admin padrão se não existir
+        admin_password = hash_password('admin123')
         conn.execute(text("""
             INSERT INTO users (name, username, password, role, active)
-            SELECT 'Admin', 'admin', 'admin123', 'admin', 1
+            SELECT 'Admin', 'admin', :password, 'admin', 1
             WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
-        """))
+        """), {"password": admin_password})
 
         # criar vendedor padrão
+        seller_password = hash_password('123456')
         conn.execute(text("""
             INSERT INTO users (name, username, password, role, active)
-            SELECT 'Vendedor', 'vendedor', '123456', 'seller', 1
+            SELECT 'Vendedor', 'vendedor', :password, 'seller', 1
             WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'vendedor');
-        """))
+        """), {"password": seller_password})
 
-# 👇 ADICIONE ESTA FUNÇÃO NOVA
 def migrate_db():
+    """Run database migrations and create indexes"""
     db = SessionLocal()
     try:
         # lista colunas existentes da tabela materials
@@ -69,7 +78,7 @@ def migrate_db():
             if column not in existing:
                 db.execute(text(sql))
 
-        # 🔥 NOVO BLOCO PARA USERS
+        # Migrações para users
         user_columns = db.execute(text("PRAGMA table_info(users)")).fetchall()
         user_existing = {col[1] for col in user_columns}
 
@@ -82,6 +91,20 @@ def migrate_db():
         for column, sql in user_migrations.items():
             if column not in user_existing:
                 db.execute(text(sql))
+
+        # Criar índices para performance
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_materials_active ON materials(active)",
+            "CREATE INDEX IF NOT EXISTS idx_materials_industry ON materials(industry)",
+            "CREATE INDEX IF NOT EXISTS idx_materials_solution ON materials(solution)",
+            "CREATE INDEX IF NOT EXISTS idx_materials_sort ON materials(sort_order, id)",
+            "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+            "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+            "CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token)",
+        ]
+        
+        for index_sql in indexes:
+            db.execute(text(index_sql))
 
         db.commit()
     finally:
