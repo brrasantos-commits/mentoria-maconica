@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Importação em Lote | Admin{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Importação em Lote de Materiais</h2>
+      <p>Importe múltiplos materiais do diretório de uma vez. Os arquivos já estão no servidor, basta configurar os metadados.</p>
+    </div>
+  </div>
+
+  {% if materials %}
+  <form method="post" action="/admin/materials/bulk-import">
+    <div class="panel-card" style="margin-bottom:20px;">
+      <div class="top-toolbar">
+        <div>
+          <strong>{{ materials|length }} novos materiais encontrados</strong>
+          <div class="hint">Configure os dados abaixo e clique em "Importar Selecionados"</div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="secondary-btn" onclick="selectAll()">Selecionar Todos</button>
+          <button type="button" class="secondary-btn" onclick="deselectAll()">Desmarcar Todos</button>
+        </div>
+      </div>
+    </div>
+
+    {% for material in materials %}
+    <div class="panel-card" style="margin-bottom:16px; border-left:4px solid #4f46e5;">
+      <div style="display:flex; gap:16px; align-items:flex-start;">
+        <input 
+          type="checkbox" 
+          name="filename[]" 
+          value="{{ material.filename }}"
+          id="check_{{ loop.index }}"
+          style="margin-top:4px; width:20px; height:20px; accent-color:#4f46e5;"
+          checked
+        >
+        
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div>
+              <h3 style="margin:0 0 4px; font-size:18px;">{{ material.filename }}</h3>
+              <p style="margin:0; color:#6b7280; font-size:13px;">
+                Tipo: {{ material.file_type|upper }} | Tamanho: {{ material.file_size_mb }} MB
+              </p>
+            </div>
+          </div>
+
+          <div class="form-row" style="gap:12px;">
+            <div>
+              <label for="title_{{ material.filename }}">Título *</label>
+              <input 
+                type="text" 
+                id="title_{{ material.filename }}"
+                name="title_{{ material.filename }}"
+                value="{{ material.suggested_title }}"
+                required
+              >
+            </div>
+
+            <input type="hidden" name="file_type_{{ material.filename }}" value="{{ material.file_type }}">
+
+            <div>
+              <label for="industry_{{ material.filename }}">Indústria</label>
+              <select id="industry_{{ material.filename }}" name="industry_{{ material.filename }}">
+                <option value="">Selecione...</option>
+                {% for option in industry_options %}
+                <option value="{{ option }}" {% if material.suggested_industry == option %}selected{% endif %}>
+                  {{ option }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label for="solution_{{ material.filename }}">Solução</label>
+              <select id="solution_{{ material.filename }}" name="solution_{{ material.filename }}">
+                <option value="">Selecione...</option>
+                {% for option in solution_options %}
+                <option value="{{ option }}" {% if material.suggested_solution == option %}selected{% endif %}>
+                  {{ option }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <label for="description_{{ material.filename }}">Descrição</label>
+            <textarea 
+              id="description_{{ material.filename }}"
+              name="description_{{ material.filename }}"
+              rows="2"
+              style="width:100%; border:1px solid #d1d5db; border-radius:12px; padding:12px; font-size:14px;"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;">
+      <button type="submit" class="primary-btn">✓ Importar Selecionados</button>
+      <a class="secondary-btn" href="/admin/materials">Cancelar</a>
+    </div>
+  </form>
+
+  {% else %}
+  <div class="panel-card">
+    <div class="empty-state">
+      <p style="margin:0;">✓ Nenhum material novo encontrado no diretório.</p>
+      <p style="margin:8px 0 0; color:#6b7280;">Todos os arquivos do diretório já foram importados.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <a class="secondary-btn" href="/admin/materials">← Voltar para Materiais</a>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+  function selectAll() {
+    document.querySelectorAll('input[name="filename[]"]').forEach(cb => cb.checked = true);
+  }
+
+  function deselectAll() {
+    document.querySelectorAll('input[name="filename[]"]').forEach(cb => cb.checked = false);
+  }
+</script>
+{% endblock %}

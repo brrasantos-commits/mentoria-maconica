@@ -535,9 +535,82 @@ def update_user(
                 "role": role,
                 "active": 1 if active else 0,
             })
-
         db.commit()
     finally:
         db.close()
 
     return RedirectResponse(url="/admin/users", status_code=303)
+
+
+# Bulk Import Routes
+@router.get("/materials/bulk-import", response_class=HTMLResponse)
+def bulk_import_form(request: Request):
+    """Display bulk import form with list of new materials"""
+    _admin_only(request)
+    
+    from pitch_app.services.bulk_import_service import get_new_materials
+    
+    db = SessionLocal()
+    try:
+        new_materials = get_new_materials(db)
+    finally:
+        db.close()
+    
+    return request.app.state.templates.TemplateResponse(
+        "admin_bulk_import.html",
+        {
+            "request": request,
+            "materials": new_materials,
+            "industry_options": INDUSTRY_OPTIONS,
+            "solution_options": SOLUTION_OPTIONS,
+        },
+    )
+
+
+@router.post("/materials/bulk-import")
+async def bulk_import_submit(request: Request):
+    """Process bulk import of materials"""
+    _admin_only(request)
+    
+    from pitch_app.services.bulk_import_service import bulk_import_materials
+    
+    # Get form data
+    form_data = await request.form()
+    
+    # Parse materials from form
+    materials = []
+    filenames = form_data.getlist('filename[]')
+    
+    for filename in filenames:
+        if not filename:
+            continue
+            
+        # Get data for this material
+        title = form_data.get(f'title_{filename}', '').strip()
+        file_type = form_data.get(f'file_type_{filename}', '').strip()
+        industry = form_data.get(f'industry_{filename}', '').strip()
+        solution = form_data.get(f'solution_{filename}', '').strip()
+        description = form_data.get(f'description_{filename}', '').strip()
+        
+        if title and file_type:
+            materials.append({
+                'filename': filename,
+                'title': title,
+                'file_type': file_type,
+                'industry': industry if industry else None,
+                'solution': solution if solution else None,
+                'description': description
+            })
+    
+    # Import materials
+    db = SessionLocal()
+    try:
+        result = bulk_import_materials(db, materials)
+    finally:
+        db.close()
+    
+    # Redirect with success message
+    return RedirectResponse(
+        url=f"/admin/materials?imported={result['imported']}&skipped={result['skipped']}&errors={len(result['errors'])}",
+        status_code=303
+    )
