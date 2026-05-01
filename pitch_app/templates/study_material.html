@@ -29,10 +29,12 @@
     <div id="materialSelectionState" class="card-note"></div>
 
     {% if material.type == 'pdf' %}
-      <iframe
-        src="/material/{{ material.id }}"
-        style="width:100%; height:78vh; border:0; border-radius:14px; background:#fff;"
-      ></iframe>
+      <div style="text-align:center; padding:40px; background:#f8fafc; border-radius:14px;">
+        <p style="margin-bottom:20px; color:#64748b;">Para visualizar este PDF sem opção de download, clique no botão abaixo:</p>
+        <a class="primary-btn" href="/estudo/pdf/{{ material.id }}" target="_blank" rel="noopener">
+          📄 Abrir Visualizador Protegido
+        </a>
+      </div>
     {% elif material.type in ['mp4', 'webm', 'mov', 'avi', 'mkv'] %}
       <video controls controlsList="nodownload" oncontextmenu="return false;" style="width:100%; max-height:78vh; border-radius:14px; background:#000;">
         <source src="/material/{{ material.id }}" type="video/mp4">

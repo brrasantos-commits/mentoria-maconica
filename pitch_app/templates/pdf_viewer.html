@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ material.title }} | Visualizador PDF{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* PDF Viewer Container */
+  .pdf-viewer-container {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 200px);
+    background: #525659;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .pdf-canvas-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  #pdf-canvas {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .pdf-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 12px 20px;
+    border-radius: 999px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    z-index: 10;
+  }
+
+  .pdf-controls button {
+    background: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+  }
+
+  .pdf-controls button:hover:not(:disabled) {
+    background: #e5e7eb;
+    transform: scale(1.05);
+  }
+
+  .pdf-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pdf-controls span {
+    color: #fff;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .pdf-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  /* Disable text selection and context menu */
+  .pdf-viewer-container,
+  #pdf-canvas {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>{{ material.title }}</h2>
+      <p>Visualizador de PDF protegido contra download.</p>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+    <a class="secondary-btn" href="/estudo">← Voltar para estudo</a>
+    <a class="secondary-btn" href="/pitch">Continuar para pitch →</a>
+  </div>
+
+  <div class="pdf-viewer-container" oncontextmenu="return false;">
+    <div class="pdf-loading" id="pdf-loading">Carregando PDF...</div>
+    <div class="pdf-canvas-wrapper">
+      <canvas id="pdf-canvas"></canvas>
+    </div>
+    <div class="pdf-controls">
+      <button id="prev-page" onclick="prevPage()">← Anterior</button>
+      <span id="page-info">Página 1 de 1</span>
+      <button id="next-page" onclick="nextPage()">Próxima →</button>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // Disable right-click
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  
+  // Disable keyboard shortcuts for saving
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+
+  // PDF.js configuration
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  let pdfDoc = null;
+  let pageNum = 1;
+  let pageRendering = false;
+  let pageNumPending = null;
+  const scale = 1.5;
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Load PDF
+  const url = '/material/{{ material.id }}';
+  
+  pdfjsLib.getDocument(url).promise.then(pdf => {
+    pdfDoc = pdf;
+    document.getElementById('pdf-loading').style.display = 'none';
+    document.getElementById('page-info').textContent = `Página ${pageNum} de ${pdf.numPages}`;
+    renderPage(pageNum);
+  }).catch(error => {
+    document.getElementById('pdf-loading').textContent = 'Erro ao carregar PDF';
+    console.error('Error loading PDF:', error);
+  });
+
+  function renderPage(num) {
+    pageRendering = true;
+    
+    pdfDoc.getPage(num).then(page => {
+      const viewport = page.getViewport({ scale: scale });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+
+      const renderTask = page.render(renderContext);
+      
+      renderTask.promise.then(() => {
+        pageRendering = false;
+        if (pageNumPending !== null) {
+          renderPage(pageNumPending);
+          pageNumPending = null;
+        }
+      });
+    });
+
+    // Update page info
+    document.getElementById('page-info').textContent = `Página ${num} de ${pdfDoc.numPages}`;
+    
+    // Update button states
+    document.getElementById('prev-page').disabled = (num <= 1);
+    document.getElementById('next-page').disabled = (num >= pdfDoc.numPages);
+  }
+
+  function queueRenderPage(num) {
+    if (pageRendering) {
+      pageNumPending = num;
+    } else {
+      renderPage(num);
+    }
+  }
+
+  function prevPage() {
+    if (pageNum <= 1) return;
+    pageNum--;
+    queueRenderPage(pageNum);
+  }
+
+  function nextPage() {
+    if (pageNum >= pdfDoc.numPages) return;
+    pageNum++;
+    queueRenderPage(pageNum);
+  }
+</script>
+{% endblock %}

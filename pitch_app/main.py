@@ -564,6 +564,34 @@ async def serve_material(
     )
 
 
+@app.get("/estudo/pdf/{material_id}", response_class=HTMLResponse)
+async def study_pdf_viewer(
+    request: Request,
+    material_id: int,
+    db: Session = Depends(get_db)
+):
+    """Display PDF with custom viewer (no download button)"""
+    if not is_user_logged(request):
+        return _login_redirect()
+    
+    material = get_material_by_id(db, material_id)
+    
+    if not material:
+        raise HTTPException(status_code=404, detail="Material não encontrado")
+    
+    if material["type"] != "pdf":
+        # Redirect to regular viewer for non-PDF files
+        return RedirectResponse(url=f"/estudo/{material_id}", status_code=303)
+    
+    return templates.TemplateResponse(
+        "pdf_viewer.html",
+        {
+            "request": request,
+            "material": material,
+        },
+    )
+
+
 
 @app.get("/api/jobs/{job_id}")
 async def job_status(request: Request, job_id: str):
