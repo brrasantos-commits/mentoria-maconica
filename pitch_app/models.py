@@ -37,5 +37,5 @@ class UsageLog(Base):
     user_id = Column(Integer, nullable=True)
     tokens_used = Column(Integer, nullable=True)  # For OpenAI
     cost_usd = Column(Float, nullable=True)  # Estimated cost
-    metadata = Column(Text, nullable=True)  # JSON with additional info
+    metadata_ = Column("metadata", Text, nullable=True)  # JSON with additional info
     created_at = Column(DateTime, server_default=func.current_timestamp(), nullable=False)
