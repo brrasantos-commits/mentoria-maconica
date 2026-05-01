@@ -95,4 +95,36 @@ section {
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .04);
+
+/* Download Protection - Prevent copying and downloading materials */
+.reader-frame,
+.reader-video,
+iframe[src*="/material/"],
+video[src*="/material/"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+/* Disable right-click context menu on materials */
+.reader-shell {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Prevent text selection in PDF viewer */
+iframe[src*="/material/"] {
+  -webkit-touch-callout: none;
+}
+
+/* Additional protection for video elements */
+video[controlsList*="nodownload"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
 }

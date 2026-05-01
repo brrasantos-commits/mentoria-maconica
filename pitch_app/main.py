@@ -29,6 +29,7 @@ from pitch_app.services.session_service import (
 )
 from pitch_app.services.email_service import send_reset_email
 from pitch_app.services.pdf_service import generate_pdf_from_result
+from pitch_app.services.secure_material_service import get_secure_material_response
 
 from pitch_app.services.config import (
     TEMPLATES_DIR,
@@ -69,7 +70,8 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.state.templates = templates
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-app.mount("/materials", StaticFiles(directory=str(MATERIALS_DIR)), name="materials")
+# Materials are now served through secure endpoint, not static files
+# app.mount("/materials", StaticFiles(directory=str(MATERIALS_DIR)), name="materials")
 
 app.include_router(admin_router)
 
@@ -534,6 +536,33 @@ async def session_material_clear(request: Request):
 
     materials = clear_selected_materials(request)
     return JSONResponse({"materials": materials})
+
+@app.get("/material/{material_id}")
+async def serve_material(
+    request: Request,
+    material_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Serve material file with download protection
+    Only authenticated users can access materials
+    """
+    if not is_user_logged(request):
+        raise HTTPException(status_code=401, detail="Usuário não autenticado")
+    
+    # Get material info from database
+    material = get_material_by_id(db, material_id)
+    
+    if not material:
+        raise HTTPException(status_code=404, detail="Material não encontrado")
+    
+    # Serve material with download protection
+    return get_secure_material_response(
+        material_id=material_id,
+        filename=material["filename"],
+        allow_download=False  # Block downloads
+    )
+
 
 
 @app.get("/api/jobs/{job_id}")
