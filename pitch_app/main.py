@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from datetime import datetime
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -28,6 +28,7 @@ from pitch_app.services.session_service import (
     set_user_session, clear_user_session
 )
 from pitch_app.services.email_service import send_reset_email
+from pitch_app.services.pdf_service import generate_pdf_from_result
 
 from pitch_app.services.config import (
     TEMPLATES_DIR,
@@ -311,7 +312,13 @@ async def forgot_password(
             logger.error(f"Failed to send reset email to {email}: {e}")
 
     # Always return success to prevent email enumeration
-    return HTMLResponse("Se o e-mail existir, você receberá instruções.")
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "message": "Se o e-mail existir, você receberá instruções para redefinir sua senha."
+        }
+    )
 
 
 @app.get("/reset-password", response_class=HTMLResponse)
@@ -325,17 +332,49 @@ async def reset_password_form(request: Request, token: str):
 
 @app.post("/reset-password")
 async def reset_password(
+    request: Request,
     token: str = Form(...),
     new_password: str = Form(...),
+    confirm_password: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """Handle password reset"""
+    # Validate passwords match
+    if new_password != confirm_password:
+        return templates.TemplateResponse(
+            "reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "error": "As senhas não coincidem."
+            }
+        )
+    
+    # Validate password length
+    if len(new_password) < 6:
+        return templates.TemplateResponse(
+            "reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "error": "A senha deve ter no mínimo 6 caracteres."
+            }
+        )
+    
     success = reset_password_with_token(db, token, new_password)
 
     if not success:
-        raise HTTPException(status_code=400, detail="Token inválido ou expirado")
+        return templates.TemplateResponse(
+            "reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "error": "Token inválido ou expirado. Solicite um novo link de redefinição."
+            }
+        )
 
-    return HTMLResponse("Senha alterada com sucesso!")
+    # Redirect to login with success message
+    return RedirectResponse(url="/login?reset=success", status_code=303)
 
 
 @app.get("/logout")
@@ -600,5 +639,55 @@ async def analyze_result(request: Request, job_id: str):
             **result,
         },
     )
+
+
+@app.get("/analyze/result/{job_id}/pdf")
+async def download_result_pdf(request: Request, job_id: str):
+    """Download analysis result as PDF"""
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    job = get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job não encontrado")
+
+    if job.get("status") != "done":
+        raise HTTPException(status_code=400, detail="Análise ainda não concluída")
+
+    result = job.get("result")
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Resultado não encontrado")
+
+    try:
+        # Generate PDF
+        pdf_bytes = generate_pdf_from_result(
+            seller_name=result.get("seller_name", ""),
+            video_name=result.get("video_name", ""),
+            job_id=job_id,
+            elapsed_seconds=result.get("elapsed_seconds", 0),
+            final_score=result.get("final_score", 0),
+            status=result.get("status", ""),
+            analysis_confidence=result.get("analysis_confidence", 0),
+            evaluation=result.get("evaluation", {}),
+            transcript=result.get("transcript", ""),
+            materials_context=result.get("materials_context", [])
+        )
+
+        # Return PDF as download
+        filename = f"resultado_pitch_{result.get('seller_name', 'vendedor')}_{job_id[:8]}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating PDF for job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar PDF")
 
 # Made with Bob

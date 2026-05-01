@@ -5,17 +5,32 @@
   <h2>Login</h2>
 
   <form method="post" style="display:grid; gap:12px;">
-    <input type="text" name="username" placeholder="Usuário" required>
-    <input type="password" name="password" placeholder="Senha" required>
+    <div>
+      <label for="username">Email ou Usuário</label>
+      <input type="text" id="username" name="username" placeholder="seu@email.com ou usuário" required>
+    </div>
+    
+    <div>
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" placeholder="Digite sua senha" required>
+    </div>
 
     {% if error %}
-      <div style="color:red;">{{ error }}</div>
+      <div class="card-note" style="background: #fef2f2; border-color: #fca5a5; color: #991b1b;">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    {% if request.query_params.get('reset') == 'success' %}
+      <div class="card-note" style="background: #f0fdf4; border-color: #86efac; color: #166534;">
+        ✓ Senha alterada com sucesso! Faça login com sua nova senha.
+      </div>
     {% endif %}
 
     <button class="primary-btn">Entrar</button>
 
     <a href="/forgot-password" style="font-size:13px; color:#4f46e5; text-decoration:none;">
-    Esqueci minha senha
+      Esqueci minha senha
     </a>
   </form>
 </section>

@@ -538,7 +538,10 @@
           <li class="simple-item">Nenhum material listado.</li>
         {% endfor %}
       </ul>
-      <div class="footer-actions">
+      <div class="footer-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <a class="btn" href="/analyze/result/{{ job_id }}/pdf" style="background: #16a34a; box-shadow: 0 8px 18px rgba(22, 163, 74, 0.22);">
+          📄 Baixar PDF
+        </a>
         <a class="btn" href="/">Voltar</a>
       </div>
     </section>

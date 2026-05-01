@@ -26,36 +26,38 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def authenticate_user(db: Session, username: str, password: str) -> Optional[dict]:
+def authenticate_user(db: Session, username_or_email: str, password: str) -> Optional[dict]:
     """
-    Authenticate a user with username and password
+    Authenticate a user with username/email and password
     Returns user dict if successful, None otherwise
     """
     try:
+        # Try to find user by username or email
         user = db.execute(text("""
-            SELECT id, name, username, password, role, active
+            SELECT id, name, username, email, password, role, active
             FROM users
-            WHERE username = :username AND active = 1
-        """), {"username": username}).fetchone()
+            WHERE (username = :identifier OR email = :identifier) AND active = 1
+        """), {"identifier": username_or_email}).fetchone()
 
         if not user:
-            logger.warning(f"Login attempt for non-existent user: {username}")
+            logger.warning(f"Login attempt for non-existent user: {username_or_email}")
             return None
 
         if not verify_password(password, user.password):
-            logger.warning(f"Failed login attempt for user: {username}")
+            logger.warning(f"Failed login attempt for user: {username_or_email}")
             return None
 
-        logger.info(f"Successful login for user: {username}")
+        logger.info(f"Successful login for user: {username_or_email}")
         return {
             "id": user.id,
             "name": user.name,
             "username": user.username,
+            "email": user.email,
             "role": user.role,
             "active": bool(user.active)
         }
     except Exception as e:
-        logger.error(f"Error authenticating user {username}: {e}")
+        logger.error(f"Error authenticating user {username_or_email}: {e}")
         return None
 
 
