@@ -23,6 +23,16 @@
     </div>
 
     <div>
+      <label>E-mail</label>
+      <input
+        type="email"
+        name="email"
+        value="{{ user.email if user else '' }}"
+        placeholder="email@empresa.com"
+      >
+    </div>
+
+    <div>
       <label>Senha</label>
       <input
         type="password"

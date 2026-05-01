@@ -35,6 +35,8 @@
               <span class="material-badge">Vendedor</span>
             {% endif %}
           </td>
+          <th style="padding:12px;">E-mail</th>
+          <td style="padding:12px;">{{ user.email or '-' }}</td>
           <td style="padding:12px;">
             {% if user.active %}
               <span class="material-badge" style="background:#ecfdf5; color:#047857; border-color:#bbf7d0;">Ativo</span>
