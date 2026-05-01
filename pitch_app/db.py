@@ -43,21 +43,43 @@ def init_db():
     from pitch_app.services.auth_service import hash_password
     
     with engine.begin() as conn:
-        # criar admin padrão se não existir
-        admin_password = hash_password('admin123')
-        conn.execute(text("""
-            INSERT INTO users (name, username, password, role, active)
-            SELECT 'Admin', 'admin', :password, 'admin', 1
-            WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
-        """), {"password": admin_password})
+        # Verificar se admin já existe
+        admin_exists = conn.execute(text("""
+            SELECT id, password FROM users WHERE username = 'admin'
+        """)).fetchone()
+        
+        if not admin_exists:
+            # Criar admin com senha hasheada
+            admin_password = hash_password('admin123')
+            conn.execute(text("""
+                INSERT INTO users (name, username, password, role, active)
+                VALUES ('Admin', 'admin', :password, 'admin', 1)
+            """), {"password": admin_password})
+        elif not admin_exists.password.startswith('$2'):
+            # Migrar senha em texto plano para hash
+            admin_password = hash_password(admin_exists.password)
+            conn.execute(text("""
+                UPDATE users SET password = :password WHERE username = 'admin'
+            """), {"password": admin_password})
 
-        # criar vendedor padrão
-        seller_password = hash_password('123456')
-        conn.execute(text("""
-            INSERT INTO users (name, username, password, role, active)
-            SELECT 'Vendedor', 'vendedor', :password, 'seller', 1
-            WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'vendedor');
-        """), {"password": seller_password})
+        # Verificar se vendedor já existe
+        seller_exists = conn.execute(text("""
+            SELECT id, password FROM users WHERE username = 'vendedor'
+        """)).fetchone()
+        
+        if not seller_exists:
+            # Criar vendedor com senha hasheada
+            seller_password = hash_password('123456')
+            conn.execute(text("""
+                INSERT INTO users (name, username, password, role, active)
+                VALUES ('Vendedor', 'vendedor', :password, 'seller', 1)
+            """), {"password": seller_password})
+        elif not seller_exists.password.startswith('$2'):
+            # Migrar senha em texto plano para hash
+            seller_password = hash_password(seller_exists.password)
+            conn.execute(text("""
+                UPDATE users SET password = :password WHERE username = 'vendedor'
+            """), {"password": seller_password})
 
 def migrate_db():
     """Run database migrations and create indexes"""
