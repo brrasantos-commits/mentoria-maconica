@@ -84,6 +84,7 @@ def admin_materials(request: Request):
     materials = _list_materials()
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_materials.html",
         {"request": request, "materials": materials},
     )
@@ -93,6 +94,7 @@ def admin_materials(request: Request):
 def new_material_form(request: Request):
     _admin_only(request)
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_material_form.html",
         {
             "request": request,
@@ -207,6 +209,7 @@ def edit_material_form(request: Request, material_id: int):
         db.close()
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_material_form.html",
         {
             "request": request,
@@ -382,6 +385,7 @@ def admin_users(request: Request):
         db.close()
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_users.html",
         {"request": request, "users": users},
     )
@@ -392,6 +396,7 @@ def new_user_form(request: Request):
     _admin_only(request)
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_user_form.html",
         {
             "request": request,
@@ -471,6 +476,7 @@ def edit_user_form(request: Request, user_id: int):
         db.close()
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_user_form.html",
         {
             "request": request,
@@ -557,6 +563,7 @@ def bulk_import_form(request: Request):
         db.close()
     
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_bulk_import.html",
         {
             "request": request,
@@ -704,6 +711,7 @@ async def multi_upload_page(request: Request):
     _admin_only(request)
     
     return request.app.state.templates.TemplateResponse(
+        request,
         "admin_multi_upload.html",
         {
             "request": request,
