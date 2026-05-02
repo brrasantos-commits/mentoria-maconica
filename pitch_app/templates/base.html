@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,14 +21,16 @@
       --radius: 18px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
       font-family: Inter, Arial, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(79,70,229,.08), transparent 28%),
+        radial-gradient(circle at top left, rgba(79, 70, 229, .08), transparent 28%),
         linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
     }
 
@@ -38,8 +41,8 @@
     }
 
     .site-header {
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(229,231,235,.9);
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid rgba(229, 231, 235, .9);
       border-radius: 22px;
       box-shadow: var(--shadow);
       padding: 18px 22px;
@@ -94,12 +97,12 @@
       background: var(--primary);
       color: #fff;
       border-color: var(--primary);
-      box-shadow: 0 8px 18px rgba(79,70,229,.22);
+      box-shadow: 0 8px 18px rgba(79, 70, 229, .22);
     }
 
     section.page-card {
       background: var(--card);
-      border: 1px solid rgba(229,231,235,.85);
+      border: 1px solid rgba(229, 231, 235, .85);
       border-radius: 22px;
       box-shadow: var(--shadow);
       padding: 26px;
@@ -146,7 +149,7 @@
       background: #fff;
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      box-shadow: 0 6px 18px rgba(15,23,42,.04);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
       padding: 18px;
     }
 
@@ -218,7 +221,7 @@
       font-weight: 700;
       cursor: pointer;
       transition: .18s ease;
-      box-shadow: 0 8px 18px rgba(79,70,229,.18);
+      box-shadow: 0 8px 18px rgba(79, 70, 229, .18);
     }
 
     .primary-btn:hover,
@@ -246,7 +249,8 @@
       background: var(--danger);
     }
 
-    .filter-grid, .form-row {
+    .filter-grid,
+    .form-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
@@ -330,7 +334,7 @@
     .checkbox-card.selected {
       border-color: #818cf8;
       background: #f5f7ff;
-      box-shadow: 0 10px 22px rgba(79,70,229,.10);
+      box-shadow: 0 10px 22px rgba(79, 70, 229, .10);
     }
 
     .checkbox-card input[type="checkbox"] {
@@ -448,6 +452,7 @@
 
   {% block head_extra %}{% endblock %}
 </head>
+
 <body>
   <main class="container">
     <header class="site-header">
@@ -456,21 +461,36 @@
         <p>Treinamento comercial, estudo de materiais, envio de pitch e gestão administrativa.</p>
       </div>
 
-     <nav class="site-nav">
-      <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">Estudo</a>
-      <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">Pitch</a>
+      <nav class="site-nav">
+        <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">Estudo</a>
+        <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">Pitch</a>
 
-      {% if request.session.get("user_role") == "admin" %}
-        <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}" href="/admin/materials">Materiais</a>
-        <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}" href="/admin/users">Usuários</a>
-      {% endif %}
+        {% if request.session.get("user_role") == "admin" %}
+        <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
+          href="/admin/materials">Materiais</a>
+        <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}"
+          href="/admin/users">Usuários</a>
+        {% endif %}
 
-      {% if request.session.get("user_logged") %}
+        {% if request.session.get("user_role") == "admin" %}
+        <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
+          href="/admin/materials">Materiais</a>
+
+        <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}"
+          href="/admin/users">Usuários</a>
+
+        <!-- 🔥 ADICIONE AQUI -->
+        <a class="nav-link {% if request.url.path.startswith('/admin/dashboard') %}active{% endif %}"
+          href="/admin/dashboard">Dashboard</a>
+
+        {% endif %}
+
+        {% if request.session.get("user_logged") %}
         <a class="nav-link" href="/logout">Logout</a>
-      {% else %}
+        {% else %}
         <a class="nav-link {% if request.url.path.startswith('/login') %}active{% endif %}" href="/login">Login</a>
-      {% endif %}
-    </nav>
+        {% endif %}
+      </nav>
     </header>
 
     {% block content %}{% endblock %}
@@ -478,4 +498,5 @@
 
   {% block scripts %}{% endblock %}
 </body>
+
 </html>
