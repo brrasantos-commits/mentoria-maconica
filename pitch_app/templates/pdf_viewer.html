@@ -27,7 +27,7 @@
 
   .pdf-page {
     max-width: 100%;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     margin-bottom: 10px;
   }
 
@@ -36,7 +36,7 @@
     position: absolute;
     top: 20px;
     right: 20px;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     padding: 8px;
     border-radius: 12px;
     display: flex;
@@ -76,7 +76,7 @@
     position: absolute;
     top: 20px;
     left: 20px;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     color: #fff;
     border: none;
     padding: 8px 14px;
@@ -89,7 +89,7 @@
   }
 
   .fullscreen-btn:hover {
-    background: rgba(0,0,0,0.9);
+    background: rgba(0, 0, 0, 0.9);
     transform: scale(1.05);
   }
 
@@ -112,6 +112,29 @@
     user-select: none;
     -webkit-touch-callout: none;
   }
+
+  @media (max-width: 768px) {
+    .pdf-viewer-container {
+      height: calc(100vh - 160px);
+    }
+
+    .fullscreen-btn {
+      top: 10px;
+      left: 10px;
+      font-size: 12px;
+      padding: 7px 10px;
+      z-index: 20;
+    }
+
+    .zoom-controls {
+      top: auto;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      justify-content: center;
+      z-index: 15;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -130,8 +153,9 @@
   </div>
 
   <div class="pdf-viewer-container" id="pdf-container" oncontextmenu="return false;">
-    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="Pressione F para tela cheia">⛶ Tela Cheia</button>
-    
+    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="Pressione F para tela cheia">⛶ Tela
+      Cheia</button>
+
     <div class="zoom-controls">
       <button onclick="zoomOut()" title="Diminuir zoom (-)">−</button>
       <span id="zoom-level">100%</span>
@@ -150,7 +174,7 @@
 <script>
   // Disable right-click
   document.addEventListener('contextmenu', e => e.preventDefault());
-  
+
   // Disable keyboard shortcuts for saving
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p')) {
@@ -168,7 +192,7 @@
 
   // Load PDF
   const url = '/material/{{ material.id }}';
-  
+
   pdfjsLib.getDocument(url).promise.then(pdf => {
     pdfDoc = pdf;
     document.getElementById('pdf-loading').style.display = 'none';
@@ -180,21 +204,21 @@
 
   async function renderAllPages() {
     canvasWrapper.innerHTML = ''; // Clear previous content
-    
+
     for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
       const page = await pdfDoc.getPage(pageNum);
       const viewport = page.getViewport({ scale: scale });
-      
+
       // Create canvas for this page
       const canvas = document.createElement('canvas');
       canvas.className = 'pdf-page';
       const ctx = canvas.getContext('2d');
-      
+
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
+
       canvasWrapper.appendChild(canvas);
-      
+
       // Render page
       await page.render({
         canvasContext: ctx,
@@ -231,7 +255,7 @@
   // Fullscreen function
   function toggleFullscreen() {
     const container = document.getElementById('pdf-container');
-    
+
     if (!document.fullscreenElement) {
       container.requestFullscreen().catch(err => {
         console.error('Erro ao entrar em tela cheia:', err);
@@ -251,7 +275,7 @@
       e.preventDefault();
       return false;
     }
-    
+
     // Zoom shortcuts
     if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
       e.preventDefault();
@@ -265,7 +289,7 @@
       e.preventDefault();
       resetZoom();
     }
-    
+
     // Fullscreen shortcut
     if (e.key === 'f' || e.key === 'F') {
       e.preventDefault();

@@ -224,4 +224,12 @@ def evaluate_submission(
         status="done",
     )
 
+    # Limpa arquivos temporários grandes para não encher o disco
+    for temp_path in [paths.video_path, paths.audio_path]:
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+        except Exception as exc:
+            print(f"Warning: could not delete temp file {temp_path}: {exc}")
+
     return result
