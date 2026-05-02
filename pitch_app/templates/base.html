@@ -468,13 +468,6 @@
         {% if request.session.get("user_role") == "admin" %}
         <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
           href="/admin/materials">Materiais</a>
-        <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}"
-          href="/admin/users">Usuários</a>
-        {% endif %}
-
-        {% if request.session.get("user_role") == "admin" %}
-        <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
-          href="/admin/materials">Materiais</a>
 
         <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}"
           href="/admin/users">Usuários</a>
