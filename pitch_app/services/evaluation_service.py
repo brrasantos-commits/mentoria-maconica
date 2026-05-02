@@ -1,8 +1,8 @@
 from pathlib import Path
 from time import perf_counter
 from typing import Any
-
 from fastapi import UploadFile
+
 
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.file_service import (
@@ -27,6 +27,8 @@ from pitch_app.services.transcription_service import (
 
 from pitch_app.services.config import MATERIALS_DIR
 
+from pitch_app.db import SessionLocal
+from pitch_app.services.usage_tracking_service import log_openai_usage
 
 def _normalize_material_name(value: str) -> str:
     return (value or "").strip()
@@ -101,6 +103,20 @@ def evaluate_submission(
 
     client = get_openai_client()
     transcript_text = transcribe_audio(client, paths.audio_path)
+        db = SessionLocal()
+        try:
+            log_openai_usage(
+                db=db,
+                operation="transcription",
+                tokens_used=0,
+                model="whisper-1",
+                metadata={
+                    "job_id": job_id,
+                    "video_name": video.filename,
+                }
+            )
+        finally:
+        db.close()
     print("=== TRANSCRIÇÃO DO VÍDEO DO VENDEDOR ===")
     print(transcript_text[:1000])
     print("=== FIM TRANSCRIÇÃO ===")
@@ -145,6 +161,28 @@ def evaluate_submission(
         material_texts=material_texts,
         material_names=selected_materials,
     )
+
+    estimated_tokens = max(
+        1,
+        int((len(transcript_text) + sum(len(t) for t in material_texts.values())) / 4)
+    )
+
+    db = SessionLocal()
+    try:
+        log_openai_usage(
+            db=db,
+            operation="pitch_evaluation",
+            tokens_used=estimated_tokens,
+            model="gpt-4",
+            metadata={
+                "job_id": job_id,
+                "seller_name": seller_name.strip(),
+                "video_name": video.filename,
+                "materials": selected_materials,
+            }
+        )
+    finally:
+        db.close()
 
     final_score, status = score_candidate_result(evaluation, selected_materials)
     analysis_confidence = score_analysis_confidence(evaluation, selected_materials)

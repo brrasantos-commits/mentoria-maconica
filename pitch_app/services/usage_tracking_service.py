@@ -56,7 +56,7 @@ def log_openai_usage(
             user_id=user_id,
             tokens_used=tokens_used,
             cost_usd=cost,
-            metadata=json.dumps(metadata) if metadata else None
+            metadata_=json.dumps(metadata) if metadata else None
         )
         db.add(log_entry)
         db.commit()
@@ -80,7 +80,7 @@ def log_sendgrid_usage(
             user_id=user_id,
             tokens_used=None,
             cost_usd=SENDGRID_PRICING,
-            metadata=json.dumps(metadata) if metadata else None
+            metadata_=json.dumps(metadata) if metadata else None
         )
         db.add(log_entry)
         db.commit()
@@ -105,7 +105,7 @@ def log_railway_usage(
             user_id=None,
             tokens_used=None,
             cost_usd=cost,
-            metadata=json.dumps(metadata) if metadata else None
+            metadata_=json.dumps(metadata) if metadata else None
         )
         db.add(log_entry)
         db.commit()
