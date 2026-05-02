@@ -267,7 +267,11 @@ async def login_form(request: Request):
 
 @app.get("/roleplay", response_class=HTMLResponse)
 def roleplay_page(request: Request):
-    return templates.TemplateResponse("roleplay.html", {"request": request})
+    return templates.TemplateResponse(
+        request,
+        "roleplay.html",
+        {"request": request},
+    )
 
 @app.post("/api/roleplay")
 async def roleplay_api(message: str = Form(...), history: str = Form("")):
