@@ -46,6 +46,20 @@
           </td>
           <td style="padding:12px;">
             <a class="secondary-btn" href="/admin/users/{{ user.id }}/edit">Editar</a>
+
+            {% if user.role != 'admin' %}
+            <form method="post" action="/admin/users/{{ user.id }}/delete"
+                  onsubmit="return confirmDeleteUser(this);"
+                  style="display:inline;">
+        
+              <input type="hidden" name="admin_password" value="">
+    
+              <button type="submit" class="secondary-btn"
+                      style="background:#ef4444; margin-left:6px;">
+                Excluir
+              </button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% else %}
@@ -57,4 +71,19 @@
     </table>
   </div>
 </section>
+
+<script>
+function confirmDeleteUser(form) {
+  const password = prompt("Digite sua senha de administrador:");
+
+  if (!password) {
+    return false;
+  }
+
+  form.querySelector('input[name="admin_password"]').value = password;
+
+  return confirm("Tem certeza que deseja excluir este usuário?");
+}
+</script>
+
 {% endblock %}

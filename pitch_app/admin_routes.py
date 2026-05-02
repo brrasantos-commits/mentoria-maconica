@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 import os
 
+from pitch_app.services.auth_service import verify_password
 from pitch_app.services.auth_service import hash_password
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,7 +15,14 @@ from pitch_app.services.config import MATERIALS_DIR
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-INDUSTRY_OPTIONS = ["Varejo", "Saúde", "Finanças", "Tecnologia", "Educação", "Indústria"]
+INDUSTRY_OPTIONS = [
+    "Varejo",
+    "Saúde",
+    "Finanças",
+    "Tecnologia",
+    "Educação",
+    "Indústria",
+]
 SOLUTION_OPTIONS = ["Software", "Serviços", "Consultoria", "Hardware", "Plataforma"]
 
 
@@ -90,6 +98,64 @@ def admin_materials(request: Request):
         {"request": request, "materials": materials},
     )
 
+
+@router.post("/users/{user_id}/delete")
+def delete_user(
+    request: Request,
+    user_id: int,
+    admin_password: str = Form(...),
+):
+    _admin_only(request)
+
+    current_user_id = request.session.get("user_id")
+
+    if current_user_id == user_id:
+        raise HTTPException(
+            status_code=400, detail="Você não pode excluir seu próprio usuário."
+        )
+
+    db = SessionLocal()
+    try:
+        # 🔎 Buscar usuário que será deletado
+        user_to_delete = db.execute(text("""
+            SELECT id, role
+            FROM users
+            WHERE id = :id
+        """), {"id": user_id}).fetchone()
+
+        if not user_to_delete:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        # 🚨 PROTEÇÃO: não permitir excluir admin
+        if user_to_delete.role == "admin":
+            raise HTTPException(status_code=400, detail="Não é permitido excluir admin")
+
+        # 🔎 Buscar admin logado
+        current_user_id = request.session.get("user_id")
+
+        admin = db.execute(text("""
+            SELECT id, password
+            FROM users
+            WHERE id = :id AND role = 'admin' AND active = 1
+        """), {"id": current_user_id}).fetchone()
+
+        if not admin or not verify_password(admin_password, admin.password):
+            raise HTTPException(status_code=403, detail="Senha de administrador inválida.")
+
+        # 🗑️ Deletar usuário
+        db.execute(text("""
+            DELETE FROM users
+            WHERE id = :id
+        """), {"id": user_id})
+
+        db.commit()
+
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
 from fastapi import UploadFile, File
 from typing import List
 
@@ -105,10 +171,8 @@ async def upload_bulk(files: List[UploadFile] = File(...)):
         with open(file_path, "wb") as f:
             f.write(await file.read())
 
-    return RedirectResponse(
-        url="/admin/materials/bulk-import",
-        status_code=303
-    )
+    return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
+
 
 @router.get("/materials/new", response_class=HTMLResponse)
 def new_material_form(request: Request):
@@ -168,26 +232,29 @@ async def create_material(
 
     db = SessionLocal()
     try:
-        db.execute(text("""
+        db.execute(
+            text("""
             INSERT INTO materials
             (title, filename, file_type, industry, solution, description, sort_order, active,
              transcript_path, has_transcript, summary_path, has_ai_summary)
             VALUES (:title, :filename, :file_type, :industry, :solution, :description, :sort_order, :active,
                     :transcript_path, :has_transcript, :summary_path, :has_ai_summary)
-        """), {
-            "title": title.strip(),
-            "filename": filename,
-            "file_type": _guess_type(filename),
-            "industry": industry.strip(),
-            "solution": solution.strip(),
-            "description": description.strip(),
-            "sort_order": sort_order,
-            "active": 1 if active else 0,
-            "transcript_path": transcript_path,
-            "has_transcript": has_transcript,
-            "summary_path": summary_path,
-            "has_ai_summary": has_ai_summary,
-        })
+        """),
+            {
+                "title": title.strip(),
+                "filename": filename,
+                "file_type": _guess_type(filename),
+                "industry": industry.strip(),
+                "solution": solution.strip(),
+                "description": description.strip(),
+                "sort_order": sort_order,
+                "active": 1 if active else 0,
+                "transcript_path": transcript_path,
+                "has_transcript": has_transcript,
+                "summary_path": summary_path,
+                "has_ai_summary": has_ai_summary,
+            },
+        )
         db.commit()
     finally:
         db.close()
@@ -200,12 +267,15 @@ def edit_material_form(request: Request, material_id: int):
     _admin_only(request)
     db = SessionLocal()
     try:
-        row = db.execute(text("""
+        row = db.execute(
+            text("""
             SELECT id, title, filename, file_type, industry, solution, description,
                    sort_order, active, transcript_path, has_transcript, summary_path, has_ai_summary
             FROM materials
             WHERE id = :id
-        """), {"id": material_id}).fetchone()
+        """),
+            {"id": material_id},
+        ).fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Material não encontrado")
@@ -255,7 +325,8 @@ async def update_material(
     _admin_only(request)
     db = SessionLocal()
     try:
-        db.execute(text("""
+        db.execute(
+            text("""
             UPDATE materials
             SET title = :title,
                 industry = :industry,
@@ -264,15 +335,17 @@ async def update_material(
                 sort_order = :sort_order,
                 active = :active
             WHERE id = :id
-        """), {
-            "title": title.strip(),
-            "industry": industry.strip(),
-            "solution": solution.strip(),
-            "description": description.strip(),
-            "sort_order": sort_order,
-            "active": 1 if active else 0,
-            "id": material_id,
-        })
+        """),
+            {
+                "title": title.strip(),
+                "industry": industry.strip(),
+                "solution": solution.strip(),
+                "description": description.strip(),
+                "sort_order": sort_order,
+                "active": 1 if active else 0,
+                "id": material_id,
+            },
+        )
         db.commit()
     finally:
         db.close()
@@ -286,22 +359,29 @@ def reprocess_material(request: Request, material_id: int):
 
     db = SessionLocal()
     try:
-        row = db.execute(text("""
+        row = db.execute(
+            text("""
             SELECT id, filename, file_type
             FROM materials
             WHERE id = :id
-        """), {"id": material_id}).fetchone()
+        """),
+            {"id": material_id},
+        ).fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Material não encontrado")
 
         file_path = MATERIALS_DIR / row.filename
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="Arquivo físico do material não encontrado")
+            raise HTTPException(
+                status_code=404, detail="Arquivo físico do material não encontrado"
+            )
 
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         if not api_key:
-            raise HTTPException(status_code=500, detail="OPENAI_API_KEY não configurada")
+            raise HTTPException(
+                status_code=500, detail="OPENAI_API_KEY não configurada"
+            )
 
         try:
             client = OpenAI(api_key=api_key)
@@ -314,24 +394,26 @@ def reprocess_material(request: Request, material_id: int):
         except Exception as exc:
             print("⚠️ erro no reprocessamento do material:", exc)
             raise HTTPException(
-                status_code=500,
-                detail=f"Erro ao reprocessar material: {exc}"
+                status_code=500, detail=f"Erro ao reprocessar material: {exc}"
             ) from exc
 
-        db.execute(text("""
+        db.execute(
+            text("""
             UPDATE materials
             SET transcript_path = :transcript_path,
                 has_transcript = :has_transcript,
                 summary_path = :summary_path,
                 has_ai_summary = :has_ai_summary
             WHERE id = :id
-        """), {
-            "id": material_id,
-            "transcript_path": transcript_path,
-            "has_transcript": has_transcript,
-            "summary_path": summary_path,
-            "has_ai_summary": has_ai_summary,
-        })
+        """),
+            {
+                "id": material_id,
+                "transcript_path": transcript_path,
+                "has_transcript": has_transcript,
+                "summary_path": summary_path,
+                "has_ai_summary": has_ai_summary,
+            },
+        )
         db.commit()
     finally:
         db.close()
@@ -344,11 +426,14 @@ def delete_material(request: Request, material_id: int):
     _admin_only(request)
     db = SessionLocal()
     try:
-        row = db.execute(text("""
+        row = db.execute(
+            text("""
             SELECT filename, transcript_path, summary_path
             FROM materials
             WHERE id = :id
-        """), {"id": material_id}).fetchone()
+        """),
+            {"id": material_id},
+        ).fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Material não encontrado")
@@ -444,24 +529,30 @@ def create_user(
 
     db = SessionLocal()
     try:
-        existing = db.execute(text("""
+        existing = db.execute(
+            text("""
             SELECT id FROM users WHERE username = :username
-        """), {"username": username.strip()}).fetchone()
+        """),
+            {"username": username.strip()},
+        ).fetchone()
 
         if existing:
             raise HTTPException(status_code=400, detail="Usuário já existe")
 
-        db.execute(text("""
+        db.execute(
+            text("""
             INSERT INTO users (name, username, email, password, role, active)
             VALUES (:name, :username, :email, :password, :role, :active)
-        """), {
-            "name": name.strip(),
-            "username": username.strip(),
-            "email": email.strip(),
-            "password": hash_password(password.strip()),
-            "role": role,
-            "active": 1 if active else 0,
-        })
+        """),
+            {
+                "name": name.strip(),
+                "username": username.strip(),
+                "email": email.strip(),
+                "password": hash_password(password.strip()),
+                "role": role,
+                "active": 1 if active else 0,
+            },
+        )
         db.commit()
     finally:
         db.close()
@@ -475,11 +566,14 @@ def edit_user_form(request: Request, user_id: int):
 
     db = SessionLocal()
     try:
-        row = db.execute(text("""
+        row = db.execute(
+            text("""
             SELECT id, name, username, email, role, active
             FROM users
             WHERE id = :id
-        """), {"id": user_id}).fetchone()
+        """),
+            {"id": user_id},
+        ).fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -526,7 +620,8 @@ def update_user(
     db = SessionLocal()
     try:
         if password.strip():
-            db.execute(text("""
+            db.execute(
+                text("""
                 UPDATE users
                 SET name = :name,
                     username = :username,
@@ -535,17 +630,20 @@ def update_user(
                     role = :role,
                     active = :active
                 WHERE id = :id
-            """), {
-                "id": user_id,
-                "name": name.strip(),
-                "username": username.strip(),
-                "email": email.strip(),
-                "password": hash_password(password.strip()),
-                "role": role,
-                "active": 1 if active else 0,
-            })
+            """),
+                {
+                    "id": user_id,
+                    "name": name.strip(),
+                    "username": username.strip(),
+                    "email": email.strip(),
+                    "password": hash_password(password.strip()),
+                    "role": role,
+                    "active": 1 if active else 0,
+                },
+            )
         else:
-            db.execute(text("""
+            db.execute(
+                text("""
                 UPDATE users
                 SET name = :name,
                     username = :username,
@@ -553,14 +651,16 @@ def update_user(
                     role = :role,
                     active = :active
                 WHERE id = :id
-            """), {
-                "id": user_id,
-                "name": name.strip(),
-                "username": username.strip(),
-                "email": email.strip(),
-                "role": role,
-                "active": 1 if active else 0,
-            })
+            """),
+                {
+                    "id": user_id,
+                    "name": name.strip(),
+                    "username": username.strip(),
+                    "email": email.strip(),
+                    "role": role,
+                    "active": 1 if active else 0,
+                },
+            )
         db.commit()
     finally:
         db.close()
@@ -573,15 +673,15 @@ def update_user(
 def bulk_import_form(request: Request):
     """Display bulk import form with list of new materials"""
     _admin_only(request)
-    
+
     from pitch_app.services.bulk_import_service import get_new_materials
-    
+
     db = SessionLocal()
     try:
         new_materials = get_new_materials(db)
     finally:
         db.close()
-    
+
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_bulk_import.html",
@@ -598,55 +698,57 @@ def bulk_import_form(request: Request):
 async def bulk_import_submit(request: Request):
     """Process bulk import of materials"""
     _admin_only(request)
-    
+
     from pitch_app.services.bulk_import_service import bulk_import_materials
-    
+
     # Get form data
     form_data = await request.form()
-    
+
     # Parse materials from form
     materials = []
-    filenames = form_data.getlist('filename[]')
-    
+    filenames = form_data.getlist("filename[]")
+
     for filename in filenames:
         if not filename:
             continue
-            
+
         # Get data for this material
-        title = form_data.get(f'title_{filename}', '').strip()
-        file_type = form_data.get(f'file_type_{filename}', '').strip()
-        industry = form_data.get(f'industry_{filename}', '').strip()
-        solution = form_data.get(f'solution_{filename}', '').strip()
-        description = form_data.get(f'description_{filename}', '').strip()
-        
+        title = form_data.get(f"title_{filename}", "").strip()
+        file_type = form_data.get(f"file_type_{filename}", "").strip()
+        industry = form_data.get(f"industry_{filename}", "").strip()
+        solution = form_data.get(f"solution_{filename}", "").strip()
+        description = form_data.get(f"description_{filename}", "").strip()
+
         if title and file_type:
-            materials.append({
-                'filename': filename,
-                'title': title,
-                'file_type': file_type,
-                'industry': industry if industry else None,
-                'solution': solution if solution else None,
-                'description': description
-            })
-    
+            materials.append(
+                {
+                    "filename": filename,
+                    "title": title,
+                    "file_type": file_type,
+                    "industry": industry if industry else None,
+                    "solution": solution if solution else None,
+                    "description": description,
+                }
+            )
+
     # Import materials
     db = SessionLocal()
     try:
         result = bulk_import_materials(db, materials)
     finally:
         db.close()
-    
+
     # Redirect with success message
     return RedirectResponse(
         url=f"/admin/materials?imported={result['imported']}&skipped={result['skipped']}&errors={len(result['errors'])}",
-        status_code=303
+        status_code=303,
     )
-
 
 
 # ============================================================================
 # USAGE DASHBOARD ROUTES
 # ============================================================================
+
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
@@ -655,28 +757,29 @@ async def admin_dashboard(request: Request):
     from pitch_app.services.usage_tracking_service import (
         get_usage_summary,
         get_daily_usage,
-        get_operation_breakdown
+        get_operation_breakdown,
     )
-    
+
     db = SessionLocal()
     try:
         # Get summary for last 30 days
         summary = get_usage_summary(db, days=30)
-        
+
         # Get daily data for each service
         openai_daily = get_daily_usage(db, "openai", days=30)
         sendgrid_daily = get_daily_usage(db, "sendgrid", days=30)
         railway_daily = get_daily_usage(db, "railway", days=30)
-        
+
         # Get operation breakdown
         openai_operations = get_operation_breakdown(db, "openai", days=30)
         sendgrid_operations = get_operation_breakdown(db, "sendgrid", days=30)
-        
+
         from fastapi.templating import Jinja2Templates
+
         templates = Jinja2Templates(directory="pitch_app/templates")
-        
+
         return templates.TemplateResponse(
-             request,
+            request,
             "admin_dashboard.html",
             {
                 "request": request,
@@ -686,7 +789,7 @@ async def admin_dashboard(request: Request):
                 "railway_daily": railway_daily,
                 "openai_operations": openai_operations,
                 "sendgrid_operations": sendgrid_operations,
-            }
+            },
         )
     finally:
         db.close()
@@ -697,7 +800,7 @@ async def get_dashboard_summary(request: Request, days: int = 30):
     """API endpoint to get usage summary"""
     _admin_only(request)
     from pitch_app.services.usage_tracking_service import get_usage_summary
-    
+
     db = SessionLocal()
     try:
         summary = get_usage_summary(db, days=days)
@@ -711,7 +814,7 @@ async def get_dashboard_daily(request: Request, service: str, days: int = 30):
     """API endpoint to get daily usage for a service"""
     _admin_only(request)
     from pitch_app.services.usage_tracking_service import get_daily_usage
-    
+
     db = SessionLocal()
     try:
         daily_data = get_daily_usage(db, service, days=days)
@@ -720,16 +823,16 @@ async def get_dashboard_daily(request: Request, service: str, days: int = 30):
         db.close()
 
 
-
 # ============================================================================
 # MULTI-UPLOAD ROUTES
 # ============================================================================
+
 
 @router.get("/materials/multi-upload", response_class=HTMLResponse)
 async def multi_upload_page(request: Request):
     """Display multi-upload page"""
     _admin_only(request)
-    
+
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_multi_upload.html",
@@ -739,6 +842,7 @@ async def multi_upload_page(request: Request):
             "solution_options": SOLUTION_OPTIONS,
         },
     )
+
 
 @router.post("/materials/upload-bulk")
 async def upload_bulk_materials(files: list[UploadFile] = File(...)):
@@ -752,59 +856,63 @@ async def upload_bulk_materials(files: list[UploadFile] = File(...)):
         with open(file_path, "wb") as f:
             f.write(await file.read())
 
-    return RedirectResponse(
-        url="/admin/materials/bulk-import",
-        status_code=303
-    )
+    return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
+
 
 @router.post("/materials/upload-single")
-
 async def upload_single_file(
     request: Request,
     file: UploadFile = File(...),
     title: str = Form(...),
     industry: str = Form(...),
     solution: str = Form(...),
-    description: str = Form("")
+    description: str = Form(""),
 ):
     """Upload a single file (used by multi-upload)"""
     _admin_only(request)
-    
+
     # Validate file type
     file_ext = Path(file.filename or "").suffix.lower().lstrip(".")
     if file_ext not in ["pdf", "mp4", "webm", "mov", "avi", "mkv"]:
-        raise HTTPException(status_code=400, detail=f"Tipo de arquivo não suportado: {file_ext}")
-    
+        raise HTTPException(
+            status_code=400, detail=f"Tipo de arquivo não suportado: {file_ext}"
+        )
+
     # Save file
     file_path = MATERIALS_DIR / file.filename
-    
+
     # Check if file already exists
     if file_path.exists():
-        raise HTTPException(status_code=400, detail=f"Arquivo já existe: {file.filename}")
-    
+        raise HTTPException(
+            status_code=400, detail=f"Arquivo já existe: {file.filename}"
+        )
+
     try:
         with open(file_path, "wb") as f:
             content = await file.read()
             f.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao salvar arquivo: {str(e)}")
-    
+
     # Insert into database
     db = SessionLocal()
     try:
-        db.execute(text("""
+        db.execute(
+            text("""
             INSERT INTO materials (title, filename, file_type, industry, solution, description, sort_order, active)
             VALUES (:title, :filename, :file_type, :industry, :solution, :description, 0, 1)
-        """), {
-            "title": title.strip(),
-            "filename": file.filename,
-            "file_type": file_ext,
-            "industry": industry.strip(),
-            "solution": solution.strip(),
-            "description": description.strip() if description else ""
-        })
+        """),
+            {
+                "title": title.strip(),
+                "filename": file.filename,
+                "file_type": file_ext,
+                "industry": industry.strip(),
+                "solution": solution.strip(),
+                "description": description.strip() if description else "",
+            },
+        )
         db.commit()
-        
+
         # Process material (transcription/summary if applicable)
         material_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
         if material_id:
@@ -813,14 +921,19 @@ async def upload_single_file(
             except Exception as e:
                 # Don't fail the upload if processing fails
                 print(f"Warning: Failed to process material {material_id}: {e}")
-        
-        return {"success": True, "message": f"Arquivo {file.filename} enviado com sucesso"}
-        
+
+        return {
+            "success": True,
+            "message": f"Arquivo {file.filename} enviado com sucesso",
+        }
+
     except Exception as e:
         db.rollback()
         # Remove file if database insert failed
         if file_path.exists():
             file_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Erro ao salvar no banco: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erro ao salvar no banco: {str(e)}"
+        )
     finally:
         db.close()
