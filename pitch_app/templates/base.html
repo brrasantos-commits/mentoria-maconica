@@ -464,6 +464,10 @@
       <nav class="site-nav">
         <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">Estudo</a>
         <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">Pitch</a>
+        <!-- 🔥 NOVO LINK -->
+        <a class="nav-link {% if request.url.path.startswith('/roleplay') %}active{% endif %}" href="/roleplay">
+          Roleplay
+        </a>
 
         {% if request.session.get("user_role") == "admin" %}
         <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}"

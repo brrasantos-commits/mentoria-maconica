@@ -5,6 +5,10 @@ from io import BytesIO
 from types import SimpleNamespace
 from datetime import datetime
 
+from fastapi import Form
+from fastapi.responses import HTMLResponse
+from pitch_app.services.roleplay_service import generate_ai_response
+
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -261,6 +265,29 @@ async def login_form(request: Request):
         {"request": request, "error": None},
     )
 
+@app.get("/roleplay", response_class=HTMLResponse)
+def roleplay_page(request: Request):
+    return templates.TemplateResponse("roleplay.html", {"request": request})
+
+@app.post("/api/roleplay")
+async def roleplay_api(message: str = Form(...), history: str = Form("")):
+    import json
+
+    conversation = []
+
+    if history:
+        conversation = json.loads(history)
+
+    conversation.append({"role": "user", "content": message})
+
+    ai_response = generate_ai_response(conversation)
+
+    conversation.append({"role": "assistant", "content": ai_response})
+
+    return {
+        "response": ai_response,
+        "history": conversation
+    }
 
 @app.post("/login", response_class=HTMLResponse)
 @limiter.limit("5/minute")
