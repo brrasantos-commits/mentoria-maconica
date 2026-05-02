@@ -458,7 +458,7 @@ def create_user(
             "name": name.strip(),
             "username": username.strip(),
             "email": email.strip(),
-            "password": password.strip(),
+            "password": hash_password(password.strip()),
             "role": role,
             "active": 1 if active else 0,
         })
