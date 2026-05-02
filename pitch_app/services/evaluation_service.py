@@ -30,6 +30,7 @@ from pitch_app.services.config import MATERIALS_DIR
 from pitch_app.db import SessionLocal
 from pitch_app.services.usage_tracking_service import log_openai_usage
 
+
 def _normalize_material_name(value: str) -> str:
     return (value or "").strip()
 
@@ -103,19 +104,19 @@ def evaluate_submission(
 
     client = get_openai_client()
     transcript_text = transcribe_audio(client, paths.audio_path)
-        db = SessionLocal()
-        try:
-            log_openai_usage(
-                db=db,
-                operation="transcription",
-                tokens_used=0,
-                model="whisper-1",
-                metadata={
-                    "job_id": job_id,
-                    "video_name": video.filename,
-                }
-            )
-        finally:
+    db = SessionLocal()
+    try:
+        log_openai_usage(
+            db=db,
+            operation="transcription",
+            tokens_used=0,
+            model="whisper-1",
+            metadata={
+                "job_id": job_id,
+                "video_name": video.filename,
+            },
+        )
+    finally:
         db.close()
     print("=== TRANSCRIÇÃO DO VÍDEO DO VENDEDOR ===")
     print(transcript_text[:1000])
@@ -164,7 +165,7 @@ def evaluate_submission(
 
     estimated_tokens = max(
         1,
-        int((len(transcript_text) + sum(len(t) for t in material_texts.values())) / 4)
+        int((len(transcript_text) + sum(len(t) for t in material_texts.values())) / 4),
     )
 
     db = SessionLocal()
@@ -179,7 +180,7 @@ def evaluate_submission(
                 "seller_name": seller_name.strip(),
                 "video_name": video.filename,
                 "materials": selected_materials,
-            }
+            },
         )
     finally:
         db.close()
