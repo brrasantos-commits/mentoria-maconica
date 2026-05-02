@@ -92,13 +92,17 @@
     const video = document.getElementById("material-video");
     if (!video) return;
 
+    // iPhone / Safari
     if (video.webkitEnterFullscreen) {
       video.webkitEnterFullscreen();
       return;
     }
 
+    // Android / desktop
     if (video.requestFullscreen) {
-      video.requestFullscreen();
+      video.requestFullscreen().catch(err => {
+        console.error('Erro ao entrar em tela cheia:', err);
+      });
     }
   }
 

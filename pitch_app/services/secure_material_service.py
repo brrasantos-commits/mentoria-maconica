@@ -41,55 +41,27 @@ def get_material_path(material_id: int, filename: str) -> Path:
     
     return file_path
 
+from fastapi.responses import FileResponse
 
-def stream_material(file_path: Path, disable_download: bool = True) -> StreamingResponse:
-    """
-    Stream a material file with optional download protection
-    
-    Args:
-        file_path: Path to the material file
-        disable_download: If True, prevents browser from downloading the file
-        
-    Returns:
-        StreamingResponse with the file content
-    """
-    # Determine content type
+def stream_material(file_path: Path, disable_download: bool = True):
     content_type, _ = mimetypes.guess_type(str(file_path))
     if not content_type:
         content_type = "application/octet-stream"
-    
-    # For PDFs and videos, force inline display
-    if content_type in ["application/pdf", "video/mp4", "video/webm", "video/quicktime"]:
-        content_type = content_type  # Keep original
-    
-    def file_iterator():
-        """Generator to stream file in chunks"""
-        with open(file_path, "rb") as f:
-            chunk_size = 8192  # 8KB chunks
-            while chunk := f.read(chunk_size):
-                yield chunk
-    
+
     headers = {}
-    
+
     if disable_download:
-        # Force inline display (no download)
         headers["Content-Disposition"] = f'inline; filename="{file_path.name}"'
-        
-        # Additional security headers to prevent download
         headers["X-Content-Type-Options"] = "nosniff"
         headers["X-Frame-Options"] = "SAMEORIGIN"
-        
-        # For PDFs, add additional protection
-        if content_type == "application/pdf":
-            headers["Content-Security-Policy"] = "default-src 'self'"
     else:
-        # Allow download
         headers["Content-Disposition"] = f'attachment; filename="{file_path.name}"'
-    
-    return StreamingResponse(
-        file_iterator(),
+
+    # 🔥 FileResponse resolve streaming + mobile + range request
+    return FileResponse(
+        path=file_path,
         media_type=content_type,
-        headers=headers
+        headers=headers,
     )
 
 
