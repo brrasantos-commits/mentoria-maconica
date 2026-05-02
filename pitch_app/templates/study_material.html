@@ -44,7 +44,7 @@
           oncontextmenu="return false;"
           style="width:100%; max-height:78vh; border-radius:14px; background:#000;"
         >
-          <source src="/material/{{ material.id }}" type="video/{{ material.type }}">
+          <source src="/material/{{ material.id }}" type="{% if material.type == 'mp4' %}video/mp4{% elif material.type == 'webm' %}video/webm{% elif material.type == 'mov' %}video/quicktime{% else %}video/mp4{% endif %}">
           Seu navegador não suporta reprodução de vídeo.
         </video>
         <button
@@ -91,13 +91,14 @@
   function toggleVideoFullscreen() {
     const video = document.getElementById("material-video");
     if (!video) return;
-    
-    if (!document.fullscreenElement) {
-      video.requestFullscreen().catch(err => {
-        console.error('Erro ao entrar em tela cheia:', err);
-      });
-    } else {
-      document.exitFullscreen();
+
+    if (video.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
+      return;
+    }
+
+    if (video.requestFullscreen) {
+      video.requestFullscreen();
     }
   }
 
