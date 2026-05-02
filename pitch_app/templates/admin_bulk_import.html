@@ -5,26 +5,24 @@
 {% block content %}
 <section class="page-card">
 
-  <form action="/admin/materials/upload-bulk" method="post" enctype="multipart/form-data">
-    <div class="panel-card" style="margin-bottom:20px;">
-      <h3>Upload de Arquivos</h3>
-      
-      <input type="file" name="files" multiple style="margin-top:10px;">
-      
-      <div style="margin-top:10px;">
-        <button type="submit" class="primary-btn">Enviar Arquivos</button>
-      </div>
-    </div>
-  </form>
+  <form id="bulkUploadForm" action="/admin/materials/upload-bulk" method="post" enctype="multipart/form-data">
+  <div id="dropZone" class="panel-card" style="margin-bottom:20px; border:2px dashed #4f46e5; text-align:center; padding:28px; cursor:pointer;">
+    <h3>Arraste e solte os arquivos aqui</h3>
+    <p style="color:#6b7280;">ou clique para selecionar múltiplos arquivos</p>
 
-  <form action="/admin/materials/upload-bulk" method="post" enctype="multipart/form-data">
-  <div class="panel-card" style="margin-bottom:20px;">
-    <h3>Upload de Arquivos</h3>
-    
-    <input type="file" name="files" multiple style="margin-top:10px;">
-    
-    <div style="margin-top:10px;">
+    <input id="fileInput" type="file" name="files" multiple style="display:none;">
+
+    <div id="fileList" style="margin-top:12px; font-size:14px;"></div>
+
+    <div style="margin-top:16px;">
       <button type="submit" class="primary-btn">Enviar Arquivos</button>
+    </div>
+
+    <div id="progressWrapper" style="display:none; margin-top:16px;">
+      <div style="background:#e5e7eb; border-radius:999px; overflow:hidden; height:14px;">
+        <div id="progressBar" style="width:0%; height:14px; background:#4f46e5;"></div>
+      </div>
+      <p id="progressText" style="margin-top:8px;">0%</p>
     </div>
   </div>
 </form>
@@ -155,4 +153,72 @@
     document.querySelectorAll('input[name="filename[]"]').forEach(cb => cb.checked = false);
   }
 </script>
+
+<script>
+  const dropZone = document.getElementById("dropZone");
+  const fileInput = document.getElementById("fileInput");
+  const fileList = document.getElementById("fileList");
+  const form = document.getElementById("bulkUploadForm");
+  const progressWrapper = document.getElementById("progressWrapper");
+  const progressBar = document.getElementById("progressBar");
+  const progressText = document.getElementById("progressText");
+
+  dropZone.addEventListener("click", () => fileInput.click());
+
+  dropZone.addEventListener("dragover", function(e) {
+    e.preventDefault();
+    dropZone.style.background = "#eef2ff";
+  });
+
+  dropZone.addEventListener("dragleave", function() {
+    dropZone.style.background = "transparent";
+  });
+
+  dropZone.addEventListener("drop", function(e) {
+    e.preventDefault();
+    dropZone.style.background = "transparent";
+    fileInput.files = e.dataTransfer.files;
+    showFiles();
+  });
+
+  fileInput.addEventListener("change", showFiles);
+
+  function showFiles() {
+    const files = Array.from(fileInput.files);
+    fileList.innerHTML = files.map(f => "📄 " + f.name).join("<br>");
+  }
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    Array.from(fileInput.files).forEach(file => {
+      formData.append("files", file);
+    });
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", form.action, true);
+
+    progressWrapper.style.display = "block";
+
+    xhr.upload.onprogress = function(e) {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        progressBar.style.width = percent + "%";
+        progressText.innerText = percent + "%";
+      }
+    };
+
+    xhr.onload = function() {
+      if (xhr.status === 303 || xhr.status === 200) {
+        window.location.href = "/admin/materials/bulk-import";
+      } else {
+        alert("Erro no upload");
+      }
+    };
+
+    xhr.send(formData);
+  });
+</script>
+
 {% endblock %}
