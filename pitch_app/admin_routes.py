@@ -91,8 +91,6 @@ def admin_materials(request: Request):
 
 from fastapi import UploadFile, File
 from typing import List
-import os
-from fastapi.responses import RedirectResponse
 
 @router.post("/admin/materials/upload-bulk")
 async def upload_bulk(files: List[UploadFile] = File(...)):
@@ -743,8 +741,6 @@ async def multi_upload_page(request: Request):
 
 
 @router.post("/materials/upload-single")
-from fastapi.responses import RedirectResponse
-import os
 
 @router.post("/admin/materials/upload-bulk")
 async def upload_bulk_materials(files: list[UploadFile] = File(...)):
