@@ -743,7 +743,6 @@ async def multi_upload_page(request: Request):
 
 
 @router.post("/materials/upload-single")
-from fastapi import UploadFile, File
 from fastapi.responses import RedirectResponse
 import os
 
