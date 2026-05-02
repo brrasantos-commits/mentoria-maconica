@@ -4,6 +4,31 @@
 
 {% block content %}
 <section class="page-card">
+
+  <form action="/admin/materials/upload-bulk" method="post" enctype="multipart/form-data">
+    <div class="panel-card" style="margin-bottom:20px;">
+      <h3>Upload de Arquivos</h3>
+      
+      <input type="file" name="files" multiple style="margin-top:10px;">
+      
+      <div style="margin-top:10px;">
+        <button type="submit" class="primary-btn">Enviar Arquivos</button>
+      </div>
+    </div>
+  </form>
+
+  <form action="/admin/materials/upload-bulk" method="post" enctype="multipart/form-data">
+  <div class="panel-card" style="margin-bottom:20px;">
+    <h3>Upload de Arquivos</h3>
+    
+    <input type="file" name="files" multiple style="margin-top:10px;">
+    
+    <div style="margin-top:10px;">
+      <button type="submit" class="primary-btn">Enviar Arquivos</button>
+    </div>
+  </div>
+</form>
+
   <div class="hero-block">
     <div>
       <h2>Importação em Lote de Materiais</h2>

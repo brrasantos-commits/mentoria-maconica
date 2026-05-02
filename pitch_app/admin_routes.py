@@ -89,6 +89,27 @@ def admin_materials(request: Request):
         {"request": request, "materials": materials},
     )
 
+from fastapi import UploadFile, File
+from typing import List
+import os
+from fastapi.responses import RedirectResponse
+
+@router.post("/admin/materials/upload-bulk")
+async def upload_bulk(files: List[UploadFile] = File(...)):
+
+    upload_dir = "data/materials"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    for file in files:
+        file_path = os.path.join(upload_dir, file.filename)
+
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+
+    return RedirectResponse(
+        url="/admin/materials/bulk-import",
+        status_code=303
+    )
 
 @router.get("/materials/new", response_class=HTMLResponse)
 def new_material_form(request: Request):
@@ -722,6 +743,26 @@ async def multi_upload_page(request: Request):
 
 
 @router.post("/materials/upload-single")
+from fastapi import UploadFile, File
+from fastapi.responses import RedirectResponse
+import os
+
+@router.post("/admin/materials/upload-bulk")
+async def upload_bulk_materials(files: list[UploadFile] = File(...)):
+
+    upload_dir = "data/materials"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    for file in files:
+        file_path = os.path.join(upload_dir, file.filename)
+
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+
+    return RedirectResponse(
+        url="/admin/materials/bulk-import",
+        status_code=303
+    )
 async def upload_single_file(
     request: Request,
     file: UploadFile = File(...),
