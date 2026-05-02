@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from pitch_app.services.material_service import invalidate_filter_cache
 
 from pitch_app.services.config import MATERIALS_DIR
 
@@ -232,8 +233,8 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
                 'title': material.get('title'),
                 'filename': filename,
                 'file_type': material.get('file_type'),
-                'industry': material.get('industry'),
-                'solution': material.get('solution'),
+                'industry': (material.get('industry') or '').strip() or 'Outros',
+                'solution': (material.get('solution') or '').strip() or 'Geral',
                 'description': material.get('description', ''),
                 'sort_order': next_order
             })
