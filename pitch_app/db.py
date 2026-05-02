@@ -62,6 +62,16 @@ def init_db():
                 UPDATE users SET password = :password WHERE username = 'admin'
             """), {"password": admin_password})
 
+        reset_admin_password = os.getenv("RESET_ADMIN_PASSWORD", "").strip()
+
+        if reset_admin_password:
+            admin_password = hash_password(reset_admin_password)
+            conn.execute(text("""
+                UPDATE users
+                SET password = :password, active = 1, role = 'admin'
+                WHERE username = 'admin'
+            """), {"password": admin_password})
+
         # Verificar se vendedor já existe
         seller_exists = conn.execute(text("""
             SELECT id, password FROM users WHERE username = 'vendedor'
