@@ -104,10 +104,28 @@
   }
 
   /* Disable text selection and context menu */
+  .pdf-viewer-container.mobile-fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 9999;
+    border-radius: 0;
+  }
+
+  .pdf-viewer-container.mobile-fullscreen .pdf-canvas-wrapper {
+    padding: 70px 8px 80px;
+  }
+
   @media (max-width: 768px) {
     .pdf-viewer-container {
-      height: calc(100vh - 120px);
+      height: 75vh;
       border-radius: 10px;
+    }
+
+    .pdf-page {
+      width: 100% !important;
+      height: auto !important;
     }
 
     .fullscreen-btn {
@@ -189,7 +207,7 @@
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
   let pdfDoc = null;
-  let scale = 1.5;
+  let scale = window.innerWidth <= 768 ? 2.2 : 1.5;
   const canvasWrapper = document.getElementById('canvas-wrapper');
 
   // Load PDF
@@ -258,11 +276,21 @@
   function toggleFullscreen() {
     const container = document.getElementById('pdf-container');
 
-    if (!document.fullscreenElement) {
+    if (container.classList.contains('mobile-fullscreen')) {
+      container.classList.remove('mobile-fullscreen');
+      return;
+    }
+
+    if (window.innerWidth <= 768) {
+      container.classList.add('mobile-fullscreen');
+      return;
+    }
+
+    if (!document.fullscreenElement && container.requestFullscreen) {
       container.requestFullscreen().catch(err => {
         console.error('Erro ao entrar em tela cheia:', err);
       });
-    } else {
+    } else if (document.exitFullscreen) {
       document.exitFullscreen();
     }
   }
