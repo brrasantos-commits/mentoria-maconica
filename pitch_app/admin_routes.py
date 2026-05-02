@@ -739,10 +739,7 @@ async def multi_upload_page(request: Request):
         },
     )
 
-
-@router.post("/materials/upload-single")
-
-@router.post("/admin/materials/upload-bulk")
+@router.post("/materials/upload-bulk")
 async def upload_bulk_materials(files: list[UploadFile] = File(...)):
 
     upload_dir = "data/materials"
@@ -758,6 +755,9 @@ async def upload_bulk_materials(files: list[UploadFile] = File(...)):
         url="/admin/materials/bulk-import",
         status_code=303
     )
+
+@router.post("/materials/upload-single")
+
 async def upload_single_file(
     request: Request,
     file: UploadFile = File(...),
