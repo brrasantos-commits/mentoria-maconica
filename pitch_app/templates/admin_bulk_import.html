@@ -15,7 +15,9 @@
     <div id="fileList" style="margin-top:12px; font-size:14px;"></div>
 
     <div style="margin-top:16px;">
-      <button type="submit" class="primary-btn">Enviar Arquivos</button>
+      <button type="submit" class="primary-btn" onclick="event.stopPropagation();">
+        Enviar Arquivos
+    </button>
     </div>
 
     <div id="progressWrapper" style="display:none; margin-top:16px;">
@@ -163,7 +165,12 @@
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
 
-  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("click", function(e) {
+    if (e.target.tagName.toLowerCase() === "button") {
+      return;
+    }
+    fileInput.click();
+  });
 
   dropZone.addEventListener("dragover", function(e) {
     e.preventDefault();
