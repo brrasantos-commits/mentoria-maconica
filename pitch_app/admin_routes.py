@@ -649,6 +649,7 @@ async def admin_dashboard(request: Request):
         templates = Jinja2Templates(directory="pitch_app/templates")
         
         return templates.TemplateResponse(
+             request,
             "admin_dashboard.html",
             {
                 "request": request,

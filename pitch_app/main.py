@@ -256,6 +256,7 @@ async def home(request: Request):
 async def login_form(request: Request):
     """Display login form"""
     return templates.TemplateResponse(
+         request,
         "login.html",
         {"request": request, "error": None},
     )
@@ -281,6 +282,7 @@ async def login(
         return RedirectResponse(url="/estudo", status_code=303)
 
     return templates.TemplateResponse(
+         request,
         "login.html",
         {"request": request, "error": "Usuário ou senha inválidos"},
         status_code=401,
@@ -291,6 +293,7 @@ async def login(
 async def forgot_password_form(request: Request):
     """Display forgot password form"""
     return templates.TemplateResponse(
+         request,
         "forgot_password.html",
         {"request": request}
     )
@@ -315,6 +318,7 @@ async def forgot_password(
 
     # Always return success to prevent email enumeration
     return templates.TemplateResponse(
+         request,
         "forgot_password.html",
         {
             "request": request,
@@ -327,6 +331,7 @@ async def forgot_password(
 async def reset_password_form(request: Request, token: str):
     """Display reset password form"""
     return templates.TemplateResponse(
+         request,
         "reset_password.html",
         {"request": request, "token": token}
     )
@@ -344,6 +349,7 @@ async def reset_password(
     # Validate passwords match
     if new_password != confirm_password:
         return templates.TemplateResponse(
+             request,
             "reset_password.html",
             {
                 "request": request,
@@ -355,6 +361,7 @@ async def reset_password(
     # Validate password length
     if len(new_password) < 6:
         return templates.TemplateResponse(
+             request,
             "reset_password.html",
             {
                 "request": request,
@@ -367,6 +374,7 @@ async def reset_password(
 
     if not success:
         return templates.TemplateResponse(
+             request,
             "reset_password.html",
             {
                 "request": request,
@@ -401,9 +409,9 @@ async def study_index(
     industry_options, solution_options = get_filter_options()
 
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "materials": materials,
             "industry_options": industry_options,
             "solution_options": solution_options,
@@ -437,6 +445,7 @@ async def study_material(
 
     # For other types, show the material page
     return templates.TemplateResponse(
+         request,
         "study_material.html",
         {
             "request": request,
@@ -465,6 +474,7 @@ async def pitch_form(request: Request, db: Session = Depends(get_db)):
     industry_options, solution_options = get_filter_options()
 
     return templates.TemplateResponse(
+         request,
         "pitch_form.html",
         {
             "request": request,
@@ -589,6 +599,7 @@ async def study_pdf_viewer(
         return RedirectResponse(url=f"/estudo/{material_id}", status_code=303)
     
     return templates.TemplateResponse(
+         request,
         "pdf_viewer.html",
         {
             "request": request,
@@ -666,6 +677,7 @@ async def analyze_progress(request: Request, job_id: str):
         raise HTTPException(status_code=404, detail="Job não encontrado")
 
     return templates.TemplateResponse(
+         request,
         "analyze_progress.html",
         {
             "request": request,
@@ -695,6 +707,7 @@ async def analyze_result(request: Request, job_id: str):
         raise HTTPException(status_code=404, detail="Resultado não encontrado")
 
     return templates.TemplateResponse(
+         request,
         "result.html",
         {
             "request": request,
