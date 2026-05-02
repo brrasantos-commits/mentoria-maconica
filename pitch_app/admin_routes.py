@@ -526,24 +526,24 @@ def update_user(
     db = SessionLocal()
     try:
         if password.strip():
-    db.execute(text("""
-        UPDATE users
-        SET name = :name,
-            username = :username,
-            email = :email,
-            password = :password,
-            role = :role,
-            active = :active
-        WHERE id = :id
-    """), {
-        "id": user_id,
-        "name": name.strip(),
-        "username": username.strip(),
-        "email": email.strip(),
-        "password": hash_password(password.strip()),
-        "role": role,
-        "active": 1 if active else 0,
-    })
+            db.execute(text("""
+                UPDATE users
+                SET name = :name,
+                    username = :username,
+                    email = :email,
+                    password = :password,
+                    role = :role,
+                    active = :active
+                WHERE id = :id
+            """), {
+                "id": user_id,
+                "name": name.strip(),
+                "username": username.strip(),
+                "email": email.strip(),
+                "password": hash_password(password.strip()),
+                "role": role,
+                "active": 1 if active else 0,
+            })
         else:
             db.execute(text("""
                 UPDATE users
