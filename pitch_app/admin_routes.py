@@ -92,7 +92,7 @@ def admin_materials(request: Request):
 from fastapi import UploadFile, File
 from typing import List
 
-@router.post("/admin/materials/upload-bulk")
+
 async def upload_bulk(files: List[UploadFile] = File(...)):
 
     upload_dir = "data/materials"
