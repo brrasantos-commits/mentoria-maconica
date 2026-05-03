@@ -280,8 +280,23 @@ def roleplay_page(request: Request):
     )
 
 @app.post("/api/roleplay")
-async def roleplay_api(message: str = Form(...), history: str = Form("")):
+async def roleplay_api(
+    request: Request,
+    message: str = Form(...),
+    history: str = Form("")
+):
     import json
+    from pitch_app.services.material_processing_service import get_material_text
+    from pitch_app.services.config import MATERIALS_DIR
+
+    selected_materials = get_selected_materials(request)
+
+    material_texts = {}
+
+    for filename in selected_materials:
+        material_path = MATERIALS_DIR / filename
+        if material_path.exists():
+            material_texts[filename] = get_material_text(material_path)
 
     conversation = []
 
@@ -290,7 +305,10 @@ async def roleplay_api(message: str = Form(...), history: str = Form("")):
 
     conversation.append({"role": "user", "content": message})
 
-    ai_response = generate_ai_response(conversation)
+    ai_response = generate_ai_response(
+        conversation=conversation,
+        material_texts=material_texts,
+    )
 
     conversation.append({"role": "assistant", "content": ai_response})
 
