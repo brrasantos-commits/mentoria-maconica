@@ -20,9 +20,13 @@
   <div id="chat" style="height:400px; overflow:auto; border:1px solid #ddd; padding:12px; margin-bottom:10px;"></div>
 
   <form id="chatForm">
+    <button id="evaluateBtn" class="primary-btn" style="margin-top:10px; width:100%;">
+      Finalizar e Avaliar
+    </button>
     <input type="text" id="message" placeholder="Digite sua resposta..." style="width:80%;" required disabled>
     <button type="submit">Enviar</button>
   </form>
+  <div id="scoreResult" style="margin-top:20px;"></div>
 </section>
 
 <script>
@@ -55,18 +59,6 @@ updateRoleplayLock();
 // 🔥 escuta mudanças vindas da tela de estudo
 window.addEventListener("materials-updated", function (e) {
   updateRoleplayLock();
-});
-
-window.addEventListener("materials-updated", function (e) {
-  const materials = e.detail || [];
-
-  if (materials.length === 0) {
-    warning.style.display = "block";
-    input.disabled = true;
-  } else {
-    warning.style.display = "none";
-    input.disabled = false;
-  }
 });
 
 let history = [];
@@ -110,5 +102,51 @@ form.addEventListener("submit", async function(e) {
 
   addMessage("assistant", data.response);
 });
+
+const evaluateBtn = document.getElementById("evaluateBtn");
+const resultDiv = document.getElementById("scoreResult");
+
+evaluateBtn.addEventListener("click", async function () {
+
+  if (!history.length) {
+    alert("Faça o roleplay antes de avaliar.");
+    return;
+  }
+
+  evaluateBtn.disabled = true;
+  evaluateBtn.innerText = "Avaliando...";
+
+  const formData = new FormData();
+  formData.append("history", JSON.stringify(history));
+
+  const res = await fetch("/api/roleplay/evaluate", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+
+  resultDiv.innerHTML = `
+    <div style="background:#f9fafb; padding:16px; border-radius:10px;">
+      <h3>Score Geral: ${data.score}</h3>
+
+      <p><strong>Clareza:</strong> ${data.clarity}</p>
+      <p><strong>Valor:</strong> ${data.value}</p>
+      <p><strong>Domínio:</strong> ${data.knowledge}</p>
+      <p><strong>Objeções:</strong> ${data.objections}</p>
+      <p><strong>Fechamento:</strong> ${data.closing}</p>
+
+      <h4>Pontos fortes</h4>
+      <ul>${data.strengths.map(s => `<li>${s}</li>`).join("")}</ul>
+
+      <h4>Melhorias</h4>
+      <ul>${data.improvements.map(i => `<li>${i}</li>`).join("")}</ul>
+    </div>
+  `;
+
+  evaluateBtn.innerText = "Avaliar novamente";
+  evaluateBtn.disabled = false;
+});
+
 </script>
 {% endblock %}

@@ -42,3 +42,52 @@ def generate_ai_response(conversation: list[dict], material_texts: dict[str, str
     )
 
     return response.choices[0].message.content
+
+def evaluate_roleplay(conversation: list[dict]) -> dict:
+    client: OpenAI = get_openai_client()
+
+    transcript = ""
+    for msg in conversation:
+        role = "Vendedor" if msg["role"] == "user" else "Cliente"
+        transcript += f"{role}: {msg['content']}\n"
+
+    system_prompt = """
+Você é um especialista em avaliação de vendas.
+
+Analise o desempenho do vendedor no roleplay e retorne:
+
+- score geral (0 a 100)
+- clareza
+- proposta de valor
+- domínio do material
+- tratamento de objeções
+- fechamento
+
+Também forneça:
+- pontos fortes
+- pontos de melhoria
+
+Responda em JSON no formato:
+{
+  "score": 0,
+  "clarity": 0,
+  "value": 0,
+  "knowledge": 0,
+  "objections": 0,
+  "closing": 0,
+  "strengths": [],
+  "improvements": []
+}
+"""
+
+    response = client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": transcript},
+        ],
+        temperature=0,
+    )
+
+    import json
+    return json.loads(response.choices[0].message.content)

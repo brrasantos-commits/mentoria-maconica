@@ -7,7 +7,7 @@ from datetime import datetime
 
 from fastapi import Form
 from fastapi.responses import HTMLResponse
-from pitch_app.services.roleplay_service import generate_ai_response
+from pitch_app.services.roleplay_service import generate_ai_response, evaluate_roleplay
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
@@ -285,6 +285,20 @@ async def roleplay_api(
     message: str = Form(...),
     history: str = Form("")
 ):
+    
+from pitch_app.services.roleplay_service import evaluate_roleplay
+
+
+@app.post("/api/roleplay/evaluate")
+async def evaluate_roleplay_api(history: str = Form(...)):
+    import json
+
+    conversation = json.loads(history)
+
+    result = evaluate_roleplay(conversation)
+
+    return result
+    
     import json
     from pitch_app.services.material_processing_service import get_material_text
     from pitch_app.services.config import MATERIALS_DIR
