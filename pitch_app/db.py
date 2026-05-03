@@ -54,12 +54,6 @@ def init_db():
                 INSERT INTO users (name, username, password, role, active)
                 VALUES ('Admin', 'admin', :password, 'admin', 1)
             """), {"password": admin_password})
-        elif not admin_exists.password.startswith('$2'):
-            # Migrar senha em texto plano para hash
-            admin_password = hash_password(admin_exists.password)
-            conn.execute(text("""
-                UPDATE users SET password = :password WHERE username = 'admin'
-            """), {"password": admin_password})
 
         reset_admin_password = os.getenv("RESET_ADMIN_PASSWORD", "").strip()
 
