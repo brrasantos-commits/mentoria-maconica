@@ -28,14 +28,34 @@
 <script>
 const warning = document.getElementById("warning");
 const input = document.getElementById("message");
+const button = document.querySelector("#chatForm button");
 
-// 🔥 verifica materiais selecionados
-if (!getSelectedMaterials || getSelectedMaterials().length === 0) {
-  warning.style.display = "block";
-  input.disabled = true;
-} else {
-  input.disabled = false;
+// 🔥 função central de controle
+function updateRoleplayLock() {
+  let materials = [];
+
+  if (typeof getSelectedMaterials === "function") {
+    materials = getSelectedMaterials();
+  }
+
+  if (!materials || materials.length === 0) {
+    warning.style.display = "block";
+    input.disabled = true;
+    button.disabled = true;
+  } else {
+    warning.style.display = "none";
+    input.disabled = false;
+    button.disabled = false;
+  }
 }
+
+// 🔥 executa ao carregar
+updateRoleplayLock();
+
+// 🔥 escuta mudanças vindas da tela de estudo
+window.addEventListener("materials-updated", function (e) {
+  updateRoleplayLock();
+});
 
 window.addEventListener("materials-updated", function (e) {
   const materials = e.detail || [];

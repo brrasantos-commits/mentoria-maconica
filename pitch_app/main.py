@@ -267,10 +267,16 @@ async def login_form(request: Request):
 
 @app.get("/roleplay", response_class=HTMLResponse)
 def roleplay_page(request: Request):
+    if not is_user_logged(request):
+        return _login_redirect()
+
     return templates.TemplateResponse(
         request,
         "roleplay.html",
-        {"request": request},
+        {
+            "request": request,
+            "selected_materials": get_selected_materials(request),
+        },
     )
 
 @app.post("/api/roleplay")
