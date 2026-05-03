@@ -44,13 +44,12 @@ def init_db():
     
     with engine.begin() as conn:
         # Verificar se admin já existe
-        admin_exists = conn.execute(text("""
-            SELECT id, password FROM users WHERE username = 'admin'
-        """)).fetchone()
-        
-        if not admin_exists:
-            # Criar admin com senha hasheada
-            admin_password = hash_password('admin123')
+        user_count = conn.execute(text("""
+            SELECT COUNT(*) FROM users
+        """)).scalar()
+
+        if user_count == 0:
+            admin_password = hash_password("admin123")
             conn.execute(text("""
                 INSERT INTO users (name, username, password, role, active)
                 VALUES ('Admin', 'admin', :password, 'admin', 1)
