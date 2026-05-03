@@ -284,21 +284,7 @@ async def roleplay_api(
     request: Request,
     message: str = Form(...),
     history: str = Form("")
-):
-    
-from pitch_app.services.roleplay_service import evaluate_roleplay
-
-
-@app.post("/api/roleplay/evaluate")
-async def evaluate_roleplay_api(history: str = Form(...)):
-    import json
-
-    conversation = json.loads(history)
-
-    result = evaluate_roleplay(conversation)
-
-    return result
-    
+):    
     import json
     from pitch_app.services.material_processing_service import get_material_text
     from pitch_app.services.config import MATERIALS_DIR
@@ -330,6 +316,17 @@ async def evaluate_roleplay_api(history: str = Form(...)):
         "response": ai_response,
         "history": conversation
     }
+    
+@app.post("/api/roleplay/evaluate")
+async def evaluate_roleplay_api(history: str = Form(...)):
+    import json
+
+    conversation = json.loads(history)
+
+    result = evaluate_roleplay(conversation)
+
+    return result
+
 
 @app.post("/login", response_class=HTMLResponse)
 @limiter.limit("5/minute")
