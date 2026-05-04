@@ -15,7 +15,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -90,57 +89,13 @@ def get_db():
     finally:
         db.close()
 
-def ensure_filtros_table():
-    """Create configurable filters table if it does not exist."""
-    db = SessionLocal()
-    try:
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS filtros_config (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tipo VARCHAR(50) NOT NULL,
-                valor VARCHAR(150) NOT NULL,
-                ativo BOOLEAN DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
-
-        # Seed initial values only if table is empty
-        count = db.execute(text("SELECT COUNT(*) FROM filtros_config")).scalar()
-        if count == 0:
-            initial_filters = [
-                ("industria", "Varejo"),
-                ("industria", "Saúde"),
-                ("industria", "Finanças"),
-                ("industria", "Tecnologia"),
-                ("industria", "Educação"),
-                ("industria", "Indústria"),
-                ("solucao", "Software"),
-                ("solucao", "Serviços"),
-                ("solucao", "Consultoria"),
-                ("solucao", "Hardware"),
-                ("solucao", "Plataforma"),
-            ]
-            for tipo, valor in initial_filters:
-                db.execute(text("""
-                    INSERT INTO filtros_config (tipo, valor, ativo)
-                    VALUES (:tipo, :valor, 1)
-                """), {"tipo": tipo, "valor": valor})
-
-        db.commit()
-    finally:
-        db.close()
-
-
 def get_filter_options_db(db: Session):
-    """Return active filter options from database."""
-    ensure_filtros_table()
-
-    result = db.execute(text("""
+    result = db.execute("""
         SELECT tipo, valor
         FROM filtros_config
-        WHERE ativo = 1
+        WHERE ativo = TRUE
         ORDER BY tipo, valor
-    """)).fetchall()
+    """).fetchall()
 
     industrias = []
     solucoes = []
@@ -175,7 +130,6 @@ def on_startup():
     logger.info("Starting application...")
     init_db()
     migrate_db()
-    ensure_filtros_table()
     logger.info("Application started successfully")
 
 
