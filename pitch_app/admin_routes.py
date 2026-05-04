@@ -19,16 +19,6 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-INDUSTRY_OPTIONS = [
-    "Varejo",
-    "Saúde",
-    "Finanças",
-    "Tecnologia",
-    "Educação",
-    "Indústria",
-]
-SOLUTION_OPTIONS = ["Software", "Serviços", "Consultoria", "Hardware", "Plataforma"]
-
 def ensure_filtros_table():
     db = SessionLocal()
     try:
@@ -90,6 +80,29 @@ def _list_materials():
     finally:
         db.close()
 
+def _get_filter_options():
+    db = SessionLocal()
+    try:
+        rows = db.execute(text("""
+            SELECT tipo, valor
+            FROM filtros_config
+            WHERE ativo = 1
+            ORDER BY tipo, valor
+        """)).fetchall()
+
+        industry_options = []
+        solution_options = []
+
+        for row in rows:
+            if row.tipo == "industria":
+                industry_options.append(row.valor)
+            elif row.tipo == "solucao":
+                solution_options.append(row.valor)
+
+        return industry_options, solution_options
+
+    finally:
+        db.close()
 
 @router.get("/login", response_class=HTMLResponse)
 def admin_login_form(request: Request):
@@ -198,18 +211,19 @@ async def upload_bulk(files: List[UploadFile] = File(...)):
 @router.get("/materials/new", response_class=HTMLResponse)
 def new_material_form(request: Request):
     _admin_only(request)
+    industry_options, solution_options = _get_filter_options()
+
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_material_form.html",
         {
             "request": request,
             "material": None,
-            "industry_options": INDUSTRY_OPTIONS,
-            "solution_options": SOLUTION_OPTIONS,
+            "industry_options": industry_options,
+            "solution_options": solution_options,
             "form_action": "/admin/materials/new",
         },
     )
-
 
 @router.post("/materials/new")
 async def create_material(
@@ -318,15 +332,15 @@ def edit_material_form(request: Request, material_id: int):
         }
     finally:
         db.close()
-
+    industry_options, solution_options = _get_filter_options()
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_material_form.html",
         {
             "request": request,
             "material": material,
-            "industry_options": INDUSTRY_OPTIONS,
-            "solution_options": SOLUTION_OPTIONS,
+            "industry_options": industry_options,
+            "solution_options": solution_options,
             "form_action": f"/admin/materials/{material_id}/edit",
         },
     )
@@ -703,17 +717,18 @@ def bulk_import_form(request: Request):
     finally:
         db.close()
 
+    industry_options, solution_options = _get_filter_options()
+
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_bulk_import.html",
         {
             "request": request,
             "materials": new_materials,
-            "industry_options": INDUSTRY_OPTIONS,
-            "solution_options": SOLUTION_OPTIONS,
+            "industry_options": industry_options,
+            "solution_options": solution_options,
         },
     )
-
 
 @router.post("/materials/bulk-import")
 async def bulk_import_submit(request: Request):
@@ -854,16 +869,17 @@ async def multi_upload_page(request: Request):
     """Display multi-upload page"""
     _admin_only(request)
 
+    industry_options, solution_options = _get_filter_options()
+
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_multi_upload.html",
         {
             "request": request,
-            "industry_options": INDUSTRY_OPTIONS,
-            "solution_options": SOLUTION_OPTIONS,
+            "industry_options": industry_options,
+            "solution_options": solution_options,
         },
     )
-
 
 @router.post("/materials/upload-bulk")
 async def upload_bulk_materials(files: list[UploadFile] = File(...)):
