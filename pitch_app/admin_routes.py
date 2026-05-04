@@ -1160,3 +1160,19 @@ def delete_filtro(
         db.close()
 
     return RedirectResponse(url="/admin/filtros", status_code=303)
+
+@router.post("/materials/bulk-discard")
+async def discard_bulk_materials(request: Request):
+    _admin_only(request)
+
+    form_data = await request.form()
+    filenames = form_data.getlist("filename[]")
+
+    for filename in filenames:
+        safe_name = Path(filename).name
+        file_path = MATERIALS_DIR / safe_name
+
+        if file_path.exists() and file_path.is_file():
+            file_path.unlink()
+
+    return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)

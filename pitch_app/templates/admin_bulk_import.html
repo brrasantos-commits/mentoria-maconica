@@ -129,9 +129,17 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;">
       <button type="submit" class="primary-btn">✓ Importar Selecionados</button>
 
-      <button type="button" class="secondary-btn" onclick="cancelUpload()">
-        ❌ Cancelar Importação
+      <button
+        type="submit"
+        class="secondary-btn"
+        formaction="/admin/materials/bulk-discard"
+        formmethod="post"
+        onclick="return confirm('Deseja descartar os arquivos selecionados? Eles serão removidos da área de importação.');"
+      >
+        🗑️ Descartar Selecionados
       </button>
+
+<a class="secondary-btn" href="/admin/materials">Voltar</a>
 
 <a class="secondary-btn" href="/admin/materials">Voltar</a>
     </div>
