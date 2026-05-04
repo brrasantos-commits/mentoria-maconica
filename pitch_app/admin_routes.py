@@ -121,17 +121,70 @@ def admin_logout(request: Request):
 
 
 @router.get("/materials", response_class=HTMLResponse)
-def admin_materials(request: Request):
+def admin_materials(
+    request: Request,
+    industry: str = "",
+    solution: str = ""
+):
     _admin_only(request)
     ensure_filtros_table()
-    materials = _list_materials()
+
+    db = SessionLocal()
+    try:
+        query = """
+            SELECT id, title, filename, file_type, industry, solution, description,
+                   sort_order, active, transcript_path, has_transcript, summary_path, has_ai_summary
+            FROM materials
+            WHERE 1=1
+        """
+
+        params = {}
+
+        if industry and industry != "all":
+            query += " AND industry = :industry"
+            params["industry"] = industry
+
+        if solution and solution != "all":
+            query += " AND solution = :solution"
+            params["solution"] = solution
+
+        query += " ORDER BY sort_order ASC, id ASC"
+
+        rows = db.execute(text(query), params).fetchall()
+
+        materials = [
+            {
+                "id": r.id,
+                "title": r.title,
+                "filename": r.filename,
+                "file_type": r.file_type,
+                "industry": r.industry,
+                "solution": r.solution,
+                "description": r.description,
+                "sort_order": r.sort_order,
+                "active": bool(r.active),
+            }
+            for r in rows
+        ]
+
+    finally:
+        db.close()
+
+    # 🔥 filtros dinâmicos
+    industry_options, solution_options = _get_filter_options()
 
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_materials.html",
-        {"request": request, "materials": materials},
+        {
+            "request": request,
+            "materials": materials,
+            "industry_options": industry_options,
+            "solution_options": solution_options,
+            "current_industry": industry,
+            "current_solution": solution,
+        },
     )
-
 
 @router.post("/users/{user_id}/delete")
 def delete_user(

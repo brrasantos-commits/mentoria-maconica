@@ -27,6 +27,35 @@
     </div>
   </div>
 
+  <form method="get" action="/admin/materials" class="panel-card" style="display:grid; gap:14px; margin-bottom:18px;">
+    <div class="filter-grid">
+      <div>
+        <label for="industry">Indústria</label>
+        <select id="industry" name="industry">
+          <option value="all">Todas</option>
+          {% for option in industry_options %}
+            <option value="{{ option }}" {% if current_industry == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="solution">Solução</label>
+        <select id="solution" name="solution">
+          <option value="all">Todas</option>
+          {% for option in solution_options %}
+            <option value="{{ option }}" {% if current_solution == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button type="submit" class="primary-btn">Aplicar filtros</button>
+      <a class="secondary-btn" href="/admin/materials">Limpar</a>
+    </div>
+  </form>
+
   {% if materials %}
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px;">
       {% for material in materials %}

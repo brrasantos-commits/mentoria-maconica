@@ -370,51 +370,89 @@
       color: var(--muted);
     }
 
-    /* ===== ADMIN DROPDOWN ===== */
+    /* ===== ADMIN MENU SAAS ===== */
 
-    .admin-dropdown {
+    .admin-menu {
       position: relative;
-      display: inline-block;
+      display: inline-flex;
     }
 
-    .admin-dropbtn {
+    .admin-menu-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       cursor: pointer;
     }
 
-    .admin-dropdown-content {
-      display: none;
-      position: absolute;
-      top: 46px;
-      right: 0;
-      min-width: 180px;
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      padding: 8px;
-      z-index: 50;
+    .admin-chevron {
+      transition: transform .22s ease;
     }
 
-    .admin-dropdown-content a {
-      display: block;
+    .admin-menu.open .admin-chevron {
+      transform: rotate(180deg);
+    }
+
+    .admin-menu-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 220px;
+      background: rgba(255, 255, 255, .98);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, .14);
+      padding: 8px;
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(-8px) scale(.98);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+      backdrop-filter: blur(12px);
+    }
+
+    .admin-menu.open .admin-menu-dropdown {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .admin-menu-dropdown a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       text-decoration: none;
       color: var(--text);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-weight: 600;
+      padding: 12px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      transition: background .18s ease, transform .18s ease;
     }
 
-    .admin-dropdown-content a:hover {
+    .admin-menu-dropdown a:hover {
       background: #f8fafc;
+      transform: translateX(2px);
     }
 
-    .admin-dropdown-content a.active {
-      background: var(--primary);
-      color: #fff;
+    .admin-menu-dropdown a.active {
+      background: var(--primary-soft);
+      color: var(--primary-strong);
     }
 
-    .admin-dropdown:hover .admin-dropdown-content {
-      display: block;
+    @media (max-width: 720px) {
+      .admin-menu {
+        width: 100%;
+      }
+
+      .admin-menu-btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .admin-menu-dropdown {
+        position: static;
+        width: 100%;
+        margin-top: 8px;
+      }
     }
   </style>
 
@@ -523,27 +561,25 @@
 
         {% if request.session.get("user_role") == "admin" %}
 
-        <div class="admin-dropdown">
-          <button type="button" class="nav-link admin-dropbtn">
-            Admin ▾
+        <div class="admin-menu">
+          <button type="button" class="nav-link admin-menu-btn" onclick="toggleAdminMenu(event)">
+            ⚙️ Admin <span class="admin-chevron">▾</span>
           </button>
 
-          <div class="admin-dropdown-content">
+          <div class="admin-menu-dropdown">
             <a class="{% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
-              href="/admin/materials">Materiais</a>
+              href="/admin/materials">📚 Materiais</a>
 
             <a class="{% if request.url.path.startswith('/admin/users') %}active{% endif %}"
-              href="/admin/users">Usuários</a>
+              href="/admin/users">👥 Usuários</a>
 
             <a class="{% if request.url.path.startswith('/admin/filtros') %}active{% endif %}"
-              href="/admin/filtros">Filtros</a>
+              href="/admin/filtros">🧩 Filtros</a>
 
             <a class="{% if request.url.path.startswith('/admin/dashboard') %}active{% endif %}"
-              href="/admin/dashboard">Dashboard</a>
+              href="/admin/dashboard">📊 Dashboard</a>
           </div>
-
         </div>
-
         {% endif %}
 
         {% if request.session.get("user_logged") %}
@@ -556,6 +592,31 @@
 
     {% block content %}{% endblock %}
   </main>
+
+<script>
+  function toggleAdminMenu(event) {
+    event.stopPropagation();
+
+    const menu = event.currentTarget.closest(".admin-menu");
+    if (!menu) return;
+
+    menu.classList.toggle("open");
+  }
+
+  document.addEventListener("click", function () {
+    document.querySelectorAll(".admin-menu.open").forEach(menu => {
+      menu.classList.remove("open");
+    });
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".admin-menu.open").forEach(menu => {
+        menu.classList.remove("open");
+      });
+    }
+  });
+</script>
 
   {% block scripts %}{% endblock %}
 </body>
