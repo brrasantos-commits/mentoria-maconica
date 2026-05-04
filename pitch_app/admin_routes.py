@@ -1,3 +1,4 @@
+UPLOAD_CANCEL_FLAG = {"cancel": False}
 from pathlib import Path
 import shutil
 import os
@@ -103,6 +104,12 @@ def _get_filter_options():
 
     finally:
         db.close()
+        
+@router.post("/materials/bulk-cancel")
+async def cancel_bulk_upload(request: Request):
+    _admin_only(request)
+    UPLOAD_CANCEL_FLAG["cancel"] = True
+    return {"status": "cancel_requested"}
 
 @router.get("/login", response_class=HTMLResponse)
 def admin_login_form(request: Request):
@@ -935,16 +942,42 @@ async def multi_upload_page(request: Request):
     )
 
 @router.post("/materials/upload-bulk")
-async def upload_bulk_materials(files: list[UploadFile] = File(...)):
+async def upload_bulk_materials(
+    request: Request,
+    files: list[UploadFile] = File(...)
+):
+    _admin_only(request)
+
+    UPLOAD_CANCEL_FLAG["cancel"] = False
 
     upload_dir = "data/materials"
     os.makedirs(upload_dir, exist_ok=True)
 
+    MAX_UPLOAD_MB = 50
+    MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+
     for file in files:
-        file_path = os.path.join(upload_dir, file.filename)
+        if UPLOAD_CANCEL_FLAG["cancel"]:
+            print("Upload em lote cancelado pelo usuário.")
+            break
+
+        filename = file.filename or ""
+
+        if not filename:
+            continue
+
+        content = await file.read()
+
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Arquivo muito grande: {filename}. Máximo permitido: {MAX_UPLOAD_MB}MB."
+            )
+
+        file_path = os.path.join(upload_dir, filename)
 
         with open(file_path, "wb") as f:
-            f.write(await file.read())
+            f.write(content)
 
     return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
 

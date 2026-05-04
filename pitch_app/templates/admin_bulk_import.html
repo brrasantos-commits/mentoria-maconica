@@ -128,7 +128,12 @@
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;">
       <button type="submit" class="primary-btn">✓ Importar Selecionados</button>
-      <a class="secondary-btn" href="/admin/materials">Cancelar</a>
+
+      <button type="button" class="secondary-btn" onclick="cancelUpload()">
+        ❌ Cancelar Importação
+      </button>
+
+<a class="secondary-btn" href="/admin/materials">Voltar</a>
     </div>
   </form>
 
@@ -227,5 +232,20 @@
     xhr.send(formData);
   });
 </script>
+<script>
+async function cancelUpload() {
+  await fetch("/admin/materials/bulk-cancel", {
+    method: "POST"
+  });
 
+  alert("Cancelamento solicitado!");
+
+  // opcional: resetar barra
+  const progressBar = document.getElementById("progressBar");
+  const progressText = document.getElementById("progressText");
+
+  if (progressBar) progressBar.style.width = "0%";
+  if (progressText) progressText.innerText = "Cancelado";
+}
+</script>
 {% endblock %}
