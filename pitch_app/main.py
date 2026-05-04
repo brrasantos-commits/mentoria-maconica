@@ -490,7 +490,7 @@ async def study_index(
         return _login_redirect()
 
     materials = list_materials(db, industry=industry, solution=solution)
-    industry_options, solution_options = get_filter_options()
+    industry_options, solution_options = get_filter_options_db(db)
 
     return templates.TemplateResponse(
         request,
@@ -555,7 +555,7 @@ async def pitch_form(request: Request, db: Session = Depends(get_db)):
         return _login_redirect()
 
     materials = list_materials(db)
-    industry_options, solution_options = get_filter_options()
+    industry_options, solution_options = get_filter_options_db(db)
 
     return templates.TemplateResponse(
          request,
