@@ -25,7 +25,7 @@ from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
 from pitch_app.services.auth_service import authenticate_user, create_reset_token, reset_password_with_token
-from pitch_app.services.material_service import list_materials, get_material_by_id, get_filter_options
+from pitch_app.services.material_service import list_materials, get_material_by_id
 from pitch_app.services.session_service import (
     get_selected_materials, set_selected_materials, add_selected_material,
     remove_selected_material, clear_selected_materials, is_user_logged,
@@ -89,6 +89,24 @@ def get_db():
     finally:
         db.close()
 
+def get_filter_options_db(db: Session):
+    result = db.execute("""
+        SELECT tipo, valor
+        FROM filtros_config
+        WHERE ativo = TRUE
+        ORDER BY tipo, valor
+    """).fetchall()
+
+    industrias = []
+    solucoes = []
+
+    for tipo, valor in result:
+        if tipo == "industria":
+            industrias.append(valor)
+        elif tipo == "solucao":
+            solucoes.append(valor)
+
+    return industrias, solucoes
 
 def _login_redirect():
     """Helper to redirect to login page"""

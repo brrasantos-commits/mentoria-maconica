@@ -13,6 +13,10 @@ from pitch_app.db import SessionLocal
 from pitch_app.services.material_processing_service import process_material_on_upload
 from pitch_app.services.config import MATERIALS_DIR
 
+from fastapi import Request, Form, Depends
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 INDUSTRY_OPTIONS = [
@@ -24,6 +28,22 @@ INDUSTRY_OPTIONS = [
     "Indústria",
 ]
 SOLUTION_OPTIONS = ["Software", "Serviços", "Consultoria", "Hardware", "Plataforma"]
+
+def ensure_filtros_table():
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS filtros_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tipo VARCHAR(50) NOT NULL,
+                valor VARCHAR(150) NOT NULL,
+                ativo BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    finally:
+        db.close()
 
 
 def _is_admin(request: Request):
@@ -90,6 +110,7 @@ def admin_logout(request: Request):
 @router.get("/materials", response_class=HTMLResponse)
 def admin_materials(request: Request):
     _admin_only(request)
+    ensure_filtros_table()
     materials = _list_materials()
 
     return request.app.state.templates.TemplateResponse(
@@ -937,3 +958,103 @@ async def upload_single_file(
         )
     finally:
         db.close()
+        
+@router.get("/filtros", response_class=HTMLResponse)
+def admin_filtros(request: Request):
+    _admin_only(request)
+    ensure_filtros_table()
+
+    db = SessionLocal()
+    try:
+        rows = db.execute(text("""
+            SELECT id, tipo, valor, ativo
+            FROM filtros_config
+            ORDER BY tipo, valor
+        """)).fetchall()
+    finally:
+        db.close()
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "admin_filtros.html",
+        {
+            "request": request,
+            "filtros": rows,
+        },
+    )
+
+
+@router.post("/filtros/add")
+def add_filtro(
+    request: Request,
+    tipo: str = Form(...),
+    valor: str = Form(...),
+):
+    _admin_only(request)
+    ensure_filtros_table()
+
+    valor = valor.strip()
+
+    if valor:
+        db = SessionLocal()
+        try:
+            existing = db.execute(text("""
+                SELECT id
+                FROM filtros_config
+                WHERE tipo = :tipo
+                  AND lower(valor) = lower(:valor)
+            """), {"tipo": tipo, "valor": valor}).fetchone()
+
+            if not existing:
+                db.execute(text("""
+                    INSERT INTO filtros_config (tipo, valor, ativo)
+                    VALUES (:tipo, :valor, 1)
+                """), {"tipo": tipo, "valor": valor})
+                db.commit()
+        finally:
+            db.close()
+
+    return RedirectResponse(url="/admin/filtros", status_code=303)
+
+
+@router.post("/filtros/toggle")
+def toggle_filtro(
+    request: Request,
+    filtro_id: int = Form(...),
+):
+    _admin_only(request)
+    ensure_filtros_table()
+
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            UPDATE filtros_config
+            SET ativo = CASE WHEN ativo = 1 THEN 0 ELSE 1 END
+            WHERE id = :filtro_id
+        """), {"filtro_id": filtro_id})
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/filtros", status_code=303)
+
+
+@router.post("/filtros/delete")
+def delete_filtro(
+    request: Request,
+    filtro_id: int = Form(...),
+):
+    _admin_only(request)
+    ensure_filtros_table()
+
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            DELETE FROM filtros_config
+            WHERE id = :filtro_id
+        """), {"filtro_id": filtro_id})
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/filtros", status_code=303)
