@@ -369,6 +369,53 @@
       padding: 28px 16px;
       color: var(--muted);
     }
+
+    /* ===== ADMIN DROPDOWN ===== */
+
+    .admin-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .admin-dropbtn {
+      cursor: pointer;
+    }
+
+    .admin-dropdown-content {
+      display: none;
+      position: absolute;
+      top: 46px;
+      right: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 8px;
+      z-index: 50;
+    }
+
+    .admin-dropdown-content a {
+      display: block;
+      text-decoration: none;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .admin-dropdown-content a:hover {
+      background: #f8fafc;
+    }
+
+    .admin-dropdown-content a.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .admin-dropdown:hover .admin-dropdown-content {
+      display: block;
+    }
   </style>
 
   <script>
@@ -475,21 +522,27 @@
         </a>
 
         {% if request.session.get("user_role") == "admin" %}
-        <span class="nav-link" style="background:#f8fafc; color:#64748b; cursor:default;">
-          Admin
-        </span>
 
-        <a class="nav-link {% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
-          href="/admin/materials">Materiais</a>
+        <div class="admin-dropdown">
+          <button type="button" class="nav-link admin-dropbtn">
+            Admin ▾
+          </button>
 
-        <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}"
-          href="/admin/users">Usuários</a>
+          <div class="admin-dropdown-content">
+            <a class="{% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
+              href="/admin/materials">Materiais</a>
 
-        <a class="nav-link {% if request.url.path.startswith('/admin/filtros') %}active{% endif %}"
-          href="/admin/filtros">Filtros</a>
+            <a class="{% if request.url.path.startswith('/admin/users') %}active{% endif %}"
+              href="/admin/users">Usuários</a>
 
-        <a class="nav-link {% if request.url.path.startswith('/admin/dashboard') %}active{% endif %}"
-          href="/admin/dashboard">Dashboard</a>
+            <a class="{% if request.url.path.startswith('/admin/filtros') %}active{% endif %}"
+              href="/admin/filtros">Filtros</a>
+
+            <a class="{% if request.url.path.startswith('/admin/dashboard') %}active{% endif %}"
+              href="/admin/dashboard">Dashboard</a>
+          </div>
+
+        </div>
 
         {% endif %}
 
