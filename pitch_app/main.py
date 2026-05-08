@@ -4,6 +4,7 @@ from pathlib import Path
 from io import BytesIO
 from types import SimpleNamespace
 from datetime import datetime
+from contextlib import asynccontextmanager
 
 from fastapi import Form
 from fastapi.responses import HTMLResponse
@@ -55,7 +56,26 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 (STATIC_DIR / "css").mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="Sales Pitch AI V4")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting application...")
+
+    init_db()
+    migrate_db()
+    ensure_user_permissions_table()
+    ensure_pitch_evaluations_table()
+    ensure_filtros_table()
+
+    logger.info("Application started successfully")
+
+    yield
+
+    logger.info("Shutting down application...")
+
+app = FastAPI(
+    title="Sales Pitch AI V4",
+    lifespan=lifespan
+)
 
 # Validate required environment variables
 SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY")
@@ -170,7 +190,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.on_event("startup")
 def ensure_pitch_evaluations_table():
     db = SessionLocal()
     try:
@@ -209,22 +228,7 @@ def ensure_user_permissions_table():
     finally:
         db.close()        
         
-def on_startup():
-    """Initialize database and run migrations on startup"""
-    logger.info("Starting application...")
-    init_db()
-    migrate_db()
-    ensure_user_permissions_table()
-    ensure_pitch_evaluations_table()
-    ensure_filtros_table()
-    logger.info("Application started successfully")
-
-
-@app.on_event("shutdown")
-def on_shutdown():
-    """Cleanup on shutdown"""
-    logger.info("Shutting down application...")
-
+from contextlib import asynccontextmanager
 
 def _validate_video_upload(video: UploadFile, request: Request):
     """Validate video upload with optimized size check"""
