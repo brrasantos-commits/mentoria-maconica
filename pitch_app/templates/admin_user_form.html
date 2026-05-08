@@ -55,6 +55,49 @@
       Usuário ativo
     </label>
 
+    <div class="panel-card" style="margin-top:16px;">
+      <h3>Permissões de acesso</h3>
+
+    {% set permissions = permissions if permissions is defined else [] %}
+
+      <div class="form-row">
+        <label>
+          <input type="checkbox" name="permissions" value="estudo" {% if "estudo" in permissions %}checked{% endif %}>
+          Estudo
+        </label>
+
+        <label>
+          <input type="checkbox" name="permissions" value="roleplay" {% if "roleplay" in permissions %}checked{% endif %}>
+          Roleplay
+        </label>
+
+        <label>
+          <input type="checkbox" name="permissions" value="pitch" {% if "pitch" in permissions %}checked{% endif %}>
+          Pitch
+        </label>
+
+        <label>
+          <input type="checkbox" name="permissions" value="historico" {% if "historico" in permissions %}checked{% endif %}>
+          Minha Evolução
+        </label>
+
+        <label>
+          <input type="checkbox" name="permissions" value="painel_gestor" {% if "painel_gestor" in permissions %}checked{% endif %}>
+          Painel do Gestor
+        </label>
+
+        <label>
+          <input type="checkbox" name="permissions" value="admin_materiais" {% if "admin_materiais" in permissions %}checked{% endif %}>
+          Admin — Materiais
+        </label>
+
+        <label>
+          <input type="checkbox" name="permissions" value="admin_filtros" {% if "admin_filtros" in permissions %}checked{% endif %}>
+          Admin — Filtros
+        </label>
+      </div>
+    </div>
+
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="primary-btn" type="submit">Salvar</button>
       <a class="secondary-btn" href="/admin/users">Cancelar</a>

@@ -45,6 +45,31 @@ def _admin_only(request: Request):
     if request.session.get("user_role") != "admin":
         raise HTTPException(status_code=303, headers={"Location": "/login"})
 
+def _has_permission(request: Request, feature: str):
+    if request.session.get("user_role") == "admin":
+        return True
+
+    user_id = request.session.get("user_id")
+
+    if not user_id:
+        return False
+
+    db = SessionLocal()
+    try:
+        row = db.execute(text("""
+            SELECT id
+            FROM user_permissions
+            WHERE user_id = :user_id
+              AND feature = :feature
+              AND enabled = 1
+        """), {
+            "user_id": user_id,
+            "feature": feature,
+        }).fetchone()
+
+        return row is not None
+    finally:
+        db.close()
 
 def _guess_type(filename: str) -> str:
     return Path(filename).suffix.lower().lstrip(".")
@@ -601,6 +626,7 @@ def new_user_form(request: Request):
         {
             "request": request,
             "user": None,
+            "permissions": [],
             "form_action": "/admin/users/new",
         },
     )
@@ -615,6 +641,7 @@ def create_user(
     password: str = Form(...),
     role: str = Form(...),
     active: bool = Form(False),
+    permissions: list[str] = Form([]),
 ):
     _admin_only(request)
 
@@ -648,6 +675,16 @@ def create_user(
                 "active": 1 if active else 0,
             },
         )
+        new_user_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
+
+        for permission in permissions:
+            db.execute(text("""
+                INSERT INTO user_permissions (user_id, feature, enabled)
+                VALUES (:user_id, :feature, 1)
+            """), {
+                "user_id": new_user_id,
+                "feature": permission,
+            })
         db.commit()
     finally:
         db.close()
@@ -681,6 +718,14 @@ def edit_user_form(request: Request, user_id: int):
             "role": row.role,
             "active": bool(row.active),
         }
+        permissions_rows = db.execute(text("""
+            SELECT feature
+            FROM user_permissions
+            WHERE user_id = :id
+                AND enabled = 1
+        """), {"id": user_id}).fetchall()
+
+        permissions = [r.feature for r in permissions_rows]
     finally:
         db.close()
 
@@ -690,10 +735,10 @@ def edit_user_form(request: Request, user_id: int):
         {
             "request": request,
             "user": user,
+            "permissions": permissions,
             "form_action": f"/admin/users/{user_id}/edit",
         },
-    )
-
+    ),
 
 @router.post("/users/{user_id}/edit")
 def update_user(
@@ -1179,7 +1224,8 @@ async def discard_bulk_materials(request: Request):
 
 @router.get("/gestor", response_class=HTMLResponse)
 def manager_dashboard(request: Request):
-    _admin_only(request)
+    if not _has_permission(request, "painel_gestor"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     db = SessionLocal()
     try:

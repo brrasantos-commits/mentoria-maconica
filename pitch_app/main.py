@@ -192,11 +192,29 @@ def ensure_pitch_evaluations_table():
         db.commit()
     finally:
         db.close()
+        
+def ensure_user_permissions_table():
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                feature VARCHAR(100) NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    finally:
+        db.close()        
+        
 def on_startup():
     """Initialize database and run migrations on startup"""
     logger.info("Starting application...")
     init_db()
     migrate_db()
+    ensure_user_permissions_table()
     ensure_pitch_evaluations_table()
     ensure_filtros_table()
     logger.info("Application started successfully")
@@ -388,9 +406,13 @@ async def login_form(request: Request):
     )
 
 @app.get("/roleplay", response_class=HTMLResponse)
-def roleplay_page(request: Request):
+async def roleplay_page(request: Request):
+
     if not is_user_logged(request):
         return _login_redirect()
+
+    if not user_has_permission(request, "roleplay"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     return templates.TemplateResponse(
         request,
@@ -400,6 +422,32 @@ def roleplay_page(request: Request):
             "selected_materials": get_selected_materials(request),
         },
     )
+
+def user_has_permission(request: Request, feature: str):
+    if request.session.get("user_role") == "admin":
+        return True
+
+    user_id = request.session.get("user_id")
+
+    if not user_id:
+        return False
+
+    db = SessionLocal()
+    try:
+        row = db.execute(text("""
+            SELECT id
+            FROM user_permissions
+            WHERE user_id = :user_id
+              AND feature = :feature
+              AND enabled = 1
+        """), {
+            "user_id": user_id,
+            "feature": feature,
+        }).fetchone()
+
+        return row is not None
+    finally:
+        db.close()
 
 @app.post("/api/roleplay")
 async def roleplay_api(
@@ -581,17 +629,14 @@ async def logout(request: Request):
     clear_user_session(request)
     return RedirectResponse(url="/login", status_code=303)
 
-
 @app.get("/estudo", response_class=HTMLResponse)
-async def study_index(
-    request: Request,
-    industry: str = "all",
-    solution: str = "all",
-    db: Session = Depends(get_db)
-):
-    """Display study materials index with filters"""
+async def study_index(request: Request):
+
     if not is_user_logged(request):
         return _login_redirect()
+
+    if not user_has_permission(request, "estudo"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     materials = list_materials(db, industry=industry, solution=solution)
     industry_options, solution_options = get_filter_options_db(db)
@@ -653,10 +698,13 @@ async def study_complete(request: Request):
 
 
 @app.get("/pitch", response_class=HTMLResponse)
-async def pitch_form(request: Request, db: Session = Depends(get_db)):
-    """Display pitch submission form"""
+async def pitch_page(request: Request):
+
     if not is_user_logged(request):
         return _login_redirect()
+
+    if not user_has_permission(request, "pitch"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     materials = list_materials(db)
     industry_options, solution_options = get_filter_options_db(db)
@@ -675,8 +723,12 @@ async def pitch_form(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/vendedor/historico", response_class=HTMLResponse)
 async def seller_history(request: Request, db: Session = Depends(get_db)):
+
     if not is_user_logged(request):
         return _login_redirect()
+
+    if not user_has_permission(request, "historico"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     seller_name = request.session.get("user_name")
 
