@@ -702,7 +702,10 @@ async def study_complete(request: Request):
 
 
 @app.get("/pitch", response_class=HTMLResponse)
-async def pitch_page(request: Request):
+async def pitch_page(
+    request: Request,
+    db: Session = Depends(get_db),
+):
 
     if not is_user_logged(request):
         return _login_redirect()
