@@ -20,6 +20,18 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+FEATURES = [
+    ("estudo", "Estudo"),
+    ("roleplay", "Roleplay"),
+    ("pitch", "Pitch"),
+    ("historico", "Minha Evolução"),
+    ("painel_gestor", "Painel do Gestor"),
+    ("admin_materiais", "Admin — Materiais"),
+    ("admin_usuarios", "Admin — Usuários"),
+    ("admin_filtros", "Admin — Filtros"),
+    ("admin_dashboard", "Admin — Dashboard"),
+]
+
 def ensure_filtros_table():
     db = SessionLocal()
     try:
@@ -1277,4 +1289,104 @@ def manager_dashboard(request: Request):
             "request": request,
             "rows": rows,
         },
+    )
+@router.get("/perfis", response_class=HTMLResponse)
+def profiles_page(request: Request):
+
+    _admin_only(request)
+
+    db = SessionLocal()
+
+    try:
+        profiles = db.execute(text("""
+            SELECT id, name, description, active
+            FROM access_profiles
+            ORDER BY name
+        """)).fetchall()
+
+    finally:
+        db.close()
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "admin_profiles.html",
+        {
+            "request": request,
+            "profiles": profiles,
+        },
+    )
+    @router.get("/perfis/new", response_class=HTMLResponse)
+def new_profile_form(request: Request):
+
+    _admin_only(request)
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "admin_profile_form.html",
+        {
+            "request": request,
+            "profile": None,
+            "permissions": [],
+            "features": FEATURES,
+            "form_action": "/admin/perfis/new",
+        },
+    )
+    @router.post("/perfis/new")
+def create_profile(
+    request: Request,
+    name: str = Form(...),
+    description: str = Form(""),
+    permissions: list[str] = Form([]),
+):
+
+    _admin_only(request)
+
+    db = SessionLocal()
+
+    try:
+        db.execute(text("""
+            INSERT INTO access_profiles (
+                name,
+                description,
+                active
+            )
+            VALUES (
+                :name,
+                :description,
+                1
+            )
+        """), {
+            "name": name,
+            "description": description,
+        })
+
+        profile_id = db.execute(
+            text("SELECT last_insert_rowid()")
+        ).scalar()
+
+        for permission in permissions:
+            db.execute(text("""
+                INSERT INTO access_profile_permissions (
+                    profile_id,
+                    feature,
+                    enabled
+                )
+                VALUES (
+                    :profile_id,
+                    :feature,
+                    1
+                )
+            """), {
+                "profile_id": profile_id,
+                "feature": permission,
+            })
+
+        db.commit()
+
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin/perfis",
+        status_code=303,
     )

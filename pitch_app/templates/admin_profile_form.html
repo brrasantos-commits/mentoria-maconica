@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>
+    {% if profile %}
+      Editar Perfil
+    {% else %}
+      Novo Perfil
+    {% endif %}
+  </h1>
+</div>
+
+<form method="post" action="{{ form_action }}">
+
+  <div class="panel-card">
+
+    <div class="form-group">
+      <label>Nome</label>
+
+      <input
+        type="text"
+        name="name"
+        required
+        value="{{ profile.name if profile else '' }}"
+      >
+    </div>
+
+    <div class="form-group">
+      <label>Descrição</label>
+
+      <textarea name="description">{{ profile.description if profile else '' }}</textarea>
+    </div>
+
+  </div>
+
+  <div class="panel-card" style="margin-top:16px;">
+
+    <h3>Permissões</h3>
+
+    {% for feature_key, feature_label in features %}
+
+      <label style="display:block; margin-bottom:8px;">
+
+        <input
+          type="checkbox"
+          name="permissions"
+          value="{{ feature_key }}"
+          {% if feature_key in permissions %}checked{% endif %}
+        >
+
+        {{ feature_label }}
+
+      </label>
+
+    {% endfor %}
+
+  </div>
+
+  <div style="margin-top:16px;">
+    <button class="primary-btn" type="submit">
+      Salvar
+    </button>
+
+    <a href="/admin/perfis" class="secondary-btn">
+      Cancelar
+    </a>
+  </div>
+
+</form>
+
+{% endblock %}

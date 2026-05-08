@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>Perfis de Acesso</h1>
+
+  <a href="/admin/perfis/new" class="primary-btn">
+    ➕ Novo Perfil
+  </a>
+</div>
+
+<div class="panel-card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Perfil</th>
+        <th>Descrição</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for profile in profiles %}
+      <tr>
+        <td>{{ profile.name }}</td>
+        <td>{{ profile.description }}</td>
+        <td>
+          {% if profile.active %}
+            Ativo
+          {% else %}
+            Inativo
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

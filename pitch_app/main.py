@@ -226,9 +226,35 @@ def ensure_user_permissions_table():
         """))
         db.commit()
     finally:
-        db.close()        
-        
-from contextlib import asynccontextmanager
+        db.close()
+
+
+def ensure_access_profiles_tables():
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS access_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(150) NOT NULL UNIQUE,
+                description TEXT,
+                active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS access_profile_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_id INTEGER NOT NULL,
+                feature VARCHAR(100) NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+
+        db.commit()
+    finally:
+        db.close()
 
 def _validate_video_upload(video: UploadFile, request: Request):
     """Validate video upload with optimized size check"""
