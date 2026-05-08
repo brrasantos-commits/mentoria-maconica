@@ -439,22 +439,32 @@
     }
 
     @media (max-width: 720px) {
-      .admin-menu {
+      .site-nav {
         width: 100%;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .admin-menu {
+        width: auto;
       }
 
       .admin-menu-btn {
-        width: 100%;
+        width: auto;
         justify-content: center;
       }
 
       .admin-menu-dropdown {
-        position: static;
-        width: 100%;
-        margin-top: 8px;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: auto;
+        left: 0;
+        width: 220px;
+        max-width: 90vw;
+        margin-top: 0;
       }
     }
-  </style>
 
   <script>
     let sessionMaterialsCache = {{ selected_materials | tojson if selected_materials is defined else '[]' }};
