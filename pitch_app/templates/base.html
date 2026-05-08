@@ -559,6 +559,11 @@
         Pitch
         </a>
 
+        <a class="nav-link {% if request.url.path.startswith('/vendedor/historico') %}active{% endif %}"
+            href="/vendedor/historico">
+          Minha Evolução
+        </a>
+
         {% if request.session.get("user_role") == "admin" %}
 
         <div class="admin-menu">
@@ -578,6 +583,11 @@
 
             <a class="{% if request.url.path.startswith('/admin/dashboard') %}active{% endif %}"
               href="/admin/dashboard">📊 Dashboard</a>
+
+            <a href="/admin/gestor"
+              class="{% if request.url.path.startswith('/admin/gestor') %}active{% endif %}">
+              📈 Painel do Gestor
+            </a>
           </div>
         </div>
         {% endif %}

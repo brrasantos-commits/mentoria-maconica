@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Painel do Gestor | Admin{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Painel do Gestor</h2>
+      <p>Acompanhe a evolução dos vendedores e identifique oportunidades de coaching.</p>
+    </div>
+    <div class="hero-pill">Gestão de performance</div>
+  </div>
+
+  {% if rows %}
+  <div class="panel-card">
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Vendedor</th>
+          <th style="text-align:left;">Avaliações</th>
+          <th style="text-align:left;">Média</th>
+          <th style="text-align:left;">Melhor nota</th>
+          <th style="text-align:left;">Última avaliação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.seller_name }}</td>
+          <td>{{ row.total_evaluations }}</td>
+          <td>{{ row.avg_score }}</td>
+          <td>{{ row.best_score }}</td>
+          <td>{{ row.last_evaluation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty-state">Ainda não existem avaliações registradas.</div>
+  {% endif %}
+</section>
+{% endblock %}

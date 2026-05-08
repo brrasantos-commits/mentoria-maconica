@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Minha Evolução | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Minha Evolução</h2>
+      <p>Acompanhe seu histórico de avaliações e evolução de performance.</p>
+    </div>
+    <div class="hero-pill">Histórico do vendedor</div>
+  </div>
+
+  {% if evaluations %}
+    <div class="materials-grid">
+      {% for item in evaluations %}
+      <article class="material-card">
+        <div class="material-head">
+          <span class="material-badge">Nota {{ item.final_score }}</span>
+          <span class="material-badge">{{ item.status }}</span>
+        </div>
+
+        <h3>{{ item.video_name }}</h3>
+        <p class="meta-note"><strong>Data:</strong> {{ item.created_at }}</p>
+
+        <a class="primary-btn" href="/analyze/result/{{ item.job_id }}">
+          Ver resultado completo
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      Você ainda não possui avaliações registradas.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

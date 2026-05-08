@@ -1176,3 +1176,32 @@ async def discard_bulk_materials(request: Request):
             file_path.unlink()
 
     return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
+
+@router.get("/gestor", response_class=HTMLResponse)
+def manager_dashboard(request: Request):
+    _admin_only(request)
+
+    db = SessionLocal()
+    try:
+        rows = db.execute(text("""
+            SELECT 
+                seller_name,
+                COUNT(*) AS total_evaluations,
+                ROUND(AVG(final_score), 1) AS avg_score,
+                MAX(final_score) AS best_score,
+                MAX(created_at) AS last_evaluation
+            FROM pitch_evaluations
+            GROUP BY seller_name
+            ORDER BY avg_score DESC
+        """)).fetchall()
+    finally:
+        db.close()
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "admin_manager_dashboard.html",
+        {
+            "request": request,
+            "rows": rows,
+        },
+    )

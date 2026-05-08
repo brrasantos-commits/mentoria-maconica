@@ -170,11 +170,35 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 @app.on_event("startup")
+from sqlalchemy import text
+import json
+def ensure_pitch_evaluations_table():
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS pitch_evaluations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                seller_name VARCHAR(150),
+                video_name VARCHAR(255),
+                job_id VARCHAR(100),
+                final_score INTEGER,
+                status VARCHAR(50),
+                strengths TEXT,
+                improvements TEXT,
+                full_result TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    finally:
+        db.close()
 def on_startup():
     """Initialize database and run migrations on startup"""
     logger.info("Starting application...")
     init_db()
     migrate_db()
+    ensure_pitch_evaluations_table()
     ensure_filtros_table()
     logger.info("Application started successfully")
 
@@ -221,6 +245,33 @@ def _validate_video_upload(video: UploadFile, request: Request):
                 detail=f"Arquivo muito grande. Máximo permitido: {MAX_VIDEO_SIZE_MB}MB."
             )
 
+def save_pitch_evaluation(user_id, seller_name, video_name, job_id, result):
+    db = SessionLocal()
+    try:
+        evaluation = result.get("evaluation", {})
+
+        strengths = evaluation.get("strengths", [])
+        improvements = evaluation.get("improvements", [])
+
+        db.execute(text("""
+            INSERT INTO pitch_evaluations
+            (user_id, seller_name, video_name, job_id, final_score, status, strengths, improvements, full_result)
+            VALUES (:user_id, :seller_name, :video_name, :job_id, :final_score, :status, :strengths, :improvements, :full_result)
+        """), {
+            "user_id": user_id,
+            "seller_name": seller_name,
+            "video_name": video_name,
+            "job_id": job_id,
+            "final_score": result.get("final_score", 0),
+            "status": result.get("status", ""),
+            "strengths": json.dumps(strengths, ensure_ascii=False),
+            "improvements": json.dumps(improvements, ensure_ascii=False),
+            "full_result": json.dumps(result, ensure_ascii=False),
+        })
+
+        db.commit()
+    finally:
+        db.close()
 
 def _run_analysis_job(
     job_id: str,
@@ -241,6 +292,14 @@ def _run_analysis_job(
             seller_name=seller_name,
             video=fake_upload,
             materials=materials,
+        )
+
+        save_pitch_evaluation(
+            user_id=None,
+            seller_name=seller_name,
+            video_name=video_filename,
+            job_id=job_id,
+            result=result,
         )
 
         update_job(
@@ -615,6 +674,28 @@ async def pitch_form(request: Request, db: Session = Depends(get_db)):
         },
     )
 
+@app.get("/vendedor/historico", response_class=HTMLResponse)
+async def seller_history(request: Request, db: Session = Depends(get_db)):
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    seller_name = request.session.get("user_name")
+
+    rows = db.execute(text("""
+        SELECT id, seller_name, video_name, job_id, final_score, status, created_at
+        FROM pitch_evaluations
+        WHERE seller_name = :seller_name
+        ORDER BY created_at DESC
+    """), {"seller_name": seller_name}).fetchall()
+
+    return templates.TemplateResponse(
+        request,
+        "seller_history.html",
+        {
+            "request": request,
+            "evaluations": rows,
+        },
+    )
 
 @app.get("/api/session/materials")
 async def session_materials(request: Request):
