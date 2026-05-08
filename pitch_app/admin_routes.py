@@ -685,6 +685,17 @@ def create_user(
                 "user_id": new_user_id,
                 "feature": permission,
             })
+            
+        new_user_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
+
+        for permission in permissions:
+            db.execute(text("""
+                INSERT INTO user_permissions (user_id, feature, enabled)
+                VALUES (:user_id, :feature, 1)
+            """), {
+                "user_id": new_user_id,
+                "feature": permission,
+            })
         db.commit()
     finally:
         db.close()
@@ -803,6 +814,19 @@ def update_user(
                     "active": 1 if active else 0,
                 },
             )
+            db.execute(text("""
+                DELETE FROM user_permissions
+                WHERE user_id = :user_id
+            """), {"user_id": user_id})
+
+            for permission in permissions:
+                db.execute(text("""
+                    INSERT INTO user_permissions (user_id, feature, enabled)
+                    VALUES (:user_id, :feature, 1)
+                """), {
+                    "user_id": user_id,
+                    "feature": permission,
+                })
         db.commit()
     finally:
         db.close()

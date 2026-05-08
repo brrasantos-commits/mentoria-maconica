@@ -363,7 +363,22 @@ async def login(
         if user["role"] == "admin":
             return RedirectResponse(url="/admin/materials", status_code=303)
 
-        return RedirectResponse(url="/estudo", status_code=303)
+        if user_has_permission(request, "estudo"):
+            return RedirectResponse(url="/estudo", status_code=303)
+
+        if user_has_permission(request, "painel_gestor"):
+            return RedirectResponse(url="/admin/gestor", status_code=303)
+
+        if user_has_permission(request, "roleplay"):
+            return RedirectResponse(url="/roleplay", status_code=303)
+
+        if user_has_permission(request, "pitch"):
+            return RedirectResponse(url="/pitch", status_code=303)
+
+        if user_has_permission(request, "historico"):
+            return RedirectResponse(url="/vendedor/historico", status_code=303)
+
+        return RedirectResponse(url="/login", status_code=303)
 
     return templates.TemplateResponse(
          request,
