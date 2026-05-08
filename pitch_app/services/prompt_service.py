@@ -63,24 +63,6 @@ def build_prompts(materials_text: str, transcript_text: str) -> tuple[str, str]:
 5. call to action
 6. fluidez
 
-# CRITÉRIOS AVANÇADOS
-7. Elevator Pitch focado em missão crítica e baseado em storytelling estratégico
-8. Principais dores da indústria consideradas
-9. Proposta de valor, resolutividade técnica e diferenciais da solução abordados
-10. Features principais da solução demonstradas
-11. Serviços Tecnocomp abordados
-    (Assessment, Configuração, Instalação, Segurança, Monitoramento NOC/SOC 24x7,
-     Suporte N1/N2/N3 e observabilidade)
-12. Referências e cases apresentados
-13. Porque Tecnocomp
-    (42 anos de experiência, presença em mais de 880 cidades,
-     excelência comprovada – certificações ISO 9001, 20000, 27001,
-     referência nacional em gestão de serviços de TI,
-     monitoramento contínuo via command center 24x7,
-     especialistas dedicados à continuidade do negócio)
-14. Próximos passos / call to action
-15. Frases de fechamento impactantes
-
 # INSTRUÇÕES DE SAÍDA
 - Avalie cada critério com profundidade.
 - Analise separadamente a aderência a cada material.
