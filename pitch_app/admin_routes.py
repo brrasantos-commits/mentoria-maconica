@@ -1316,21 +1316,21 @@ def profiles_page(request: Request):
         },
     )
     @router.get("/perfis/new", response_class=HTMLResponse)
-def new_profile_form(request: Request):
+        def new_profile_form(request: Request):
 
-    _admin_only(request)
+            _admin_only(request)
 
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "admin_profile_form.html",
-        {
-            "request": request,
-            "profile": None,
-            "permissions": [],
-            "features": FEATURES,
-            "form_action": "/admin/perfis/new",
-        },
-    )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "admin_profile_form.html",
+            {
+                "request": request,
+                "profile": None,
+                "permissions": [],
+                "features": FEATURES,
+                "form_action": "/admin/perfis/new",
+            },
+        )
     @router.post("/perfis/new")
 def create_profile(
     request: Request,
