@@ -630,8 +630,12 @@ async def logout(request: Request):
     return RedirectResponse(url="/login", status_code=303)
 
 @app.get("/estudo", response_class=HTMLResponse)
-async def study_index(request: Request):
-
+async def study_index(
+    request: Request,
+    industry: str = "all",
+    solution: str = "all",
+    db: Session = Depends(get_db),
+):
     if not is_user_logged(request):
         return _login_redirect()
 
