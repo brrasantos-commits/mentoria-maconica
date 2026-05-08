@@ -16,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+import json
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -170,8 +171,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 @app.on_event("startup")
-from sqlalchemy import text
-import json
 def ensure_pitch_evaluations_table():
     db = SessionLocal()
     try:
