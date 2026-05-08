@@ -1316,9 +1316,9 @@ def profiles_page(request: Request):
         },
     )
     @router.get("/perfis/new", response_class=HTMLResponse)
-        def new_profile_form(request: Request):
+    def new_profile_form(request: Request):
 
-            _admin_only(request)
+        _admin_only(request)
 
         return request.app.state.templates.TemplateResponse(
             request,
