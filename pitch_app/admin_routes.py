@@ -763,6 +763,7 @@ def update_user(
     password: str = Form(""),
     role: str = Form(...),
     active: bool = Form(False),
+    permissions: list[str] = Form([]),
 ):
     _admin_only(request)
 
