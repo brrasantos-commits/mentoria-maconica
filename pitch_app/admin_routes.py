@@ -718,14 +718,16 @@ def edit_user_form(request: Request, user_id: int):
             "role": row.role,
             "active": bool(row.active),
         }
+
         permissions_rows = db.execute(text("""
             SELECT feature
             FROM user_permissions
             WHERE user_id = :id
-                AND enabled = 1
+              AND enabled = 1
         """), {"id": user_id}).fetchall()
 
         permissions = [r.feature for r in permissions_rows]
+
     finally:
         db.close()
 
@@ -738,7 +740,7 @@ def edit_user_form(request: Request, user_id: int):
             "permissions": permissions,
             "form_action": f"/admin/users/{user_id}/edit",
         },
-    ),
+    )
 
 @router.post("/users/{user_id}/edit")
 def update_user(
