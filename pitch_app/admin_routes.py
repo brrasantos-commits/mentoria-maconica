@@ -1405,3 +1405,4 @@ def new_profile_form(request: Request):
             "form_action": "/admin/perfis/new",
         },
     )
+print("ROTAS ADMIN:", [r.path + " " + ",".join(r.methods) for r in router.routes])
