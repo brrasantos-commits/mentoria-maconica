@@ -1390,3 +1390,18 @@ def profiles_page(request: Request):
             url="/admin/perfis",
             status_code=303,
         )
+@router.get("/perfis/new", response_class=HTMLResponse)
+def new_profile_form(request: Request):
+    _admin_only(request)
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "admin_profile_form.html",
+        {
+            "request": request,
+            "profile": None,
+            "permissions": [],
+            "features": FEATURES,
+            "form_action": "/admin/perfis/new",
+        },
+    )

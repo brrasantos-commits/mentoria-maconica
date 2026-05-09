@@ -178,7 +178,7 @@ def get_daily_usage(
         daily_data = []
         for row in results:
             daily_data.append({
-                "date": row.date.isoformat() if row.date else None,
+                "date": row.date.isoformat() if hasattr(row.date, "isoformat") else str(row.date) if row.date else None,
                 "count": row.count,
                 "tokens": int(row.tokens) if row.tokens else 0,
                 "cost": float(row.cost) if row.cost else 0.0
