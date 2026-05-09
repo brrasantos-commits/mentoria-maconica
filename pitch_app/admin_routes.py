@@ -800,7 +800,7 @@ def update_user(
                     email = :email,
                     password = :password,
                     role = :role,
-                    active = :active
+                    active = :active,
                     profile_id = :profile_id
                 WHERE id = :id
             """),
@@ -823,7 +823,7 @@ def update_user(
                     username = :username,
                     email = :email,
                     role = :role,
-                    active = :active
+                    active = :active,
                     profile_id = :profile_id
                 WHERE id = :id
             """),
