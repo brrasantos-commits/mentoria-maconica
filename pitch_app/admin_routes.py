@@ -1332,61 +1332,61 @@ def profiles_page(request: Request):
             },
         )
     @router.post("/perfis/new")
-def create_profile(
-    request: Request,
-    name: str = Form(...),
-    description: str = Form(""),
-    permissions: list[str] = Form([]),
-):
+    def create_profile(
+        request: Request,
+        name: str = Form(...),
+        description: str = Form(""),
+        permissions: list[str] = Form([]),
+    ):
 
-    _admin_only(request)
+        _admin_only(request)
 
-    db = SessionLocal()
+        db = SessionLocal()
 
-    try:
-        db.execute(text("""
-            INSERT INTO access_profiles (
-                name,
-                description,
-                active
-            )
-            VALUES (
-                :name,
-                :description,
-                1
-            )
-        """), {
-            "name": name,
-            "description": description,
-        })
-
-        profile_id = db.execute(
-            text("SELECT last_insert_rowid()")
-        ).scalar()
-
-        for permission in permissions:
+        try:
             db.execute(text("""
-                INSERT INTO access_profile_permissions (
-                    profile_id,
-                    feature,
-                    enabled
+                INSERT INTO access_profiles (
+                    name,
+                    description,
+                    active
                 )
                 VALUES (
-                    :profile_id,
-                    :feature,
+                    :name,
+                    :description,
                     1
                 )
             """), {
-                "profile_id": profile_id,
-                "feature": permission,
+                "name": name,
+                "description": description,
             })
 
-        db.commit()
+            profile_id = db.execute(
+                text("SELECT last_insert_rowid()")
+            ).scalar()
 
-    finally:
-        db.close()
+            for permission in permissions:
+                db.execute(text("""
+                    INSERT INTO access_profile_permissions (
+                        profile_id,
+                        feature,
+                        enabled
+                    )
+                    VALUES (
+                        :profile_id,
+                        :feature,
+                        1
+                    )
+                """), {
+                    "profile_id": profile_id,
+                    "feature": permission,
+                })
 
-    return RedirectResponse(
-        url="/admin/perfis",
-        status_code=303,
-    )
+            db.commit()
+
+        finally:
+            db.close()
+
+        return RedirectResponse(
+            url="/admin/perfis",
+            status_code=303,
+        )
