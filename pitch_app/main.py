@@ -64,7 +64,10 @@ async def lifespan(app: FastAPI):
     migrate_db()
     ensure_user_permissions_table()
     ensure_pitch_evaluations_table()
+    
     ensure_filtros_table()
+    ensure_access_profiles_tables()
+
 
     logger.info("Application started successfully")
 
