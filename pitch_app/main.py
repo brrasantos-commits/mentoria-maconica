@@ -472,17 +472,21 @@ def user_has_permission(request: Request, feature: str):
     db = SessionLocal()
     try:
         row = db.execute(text("""
-            SELECT id
-            FROM user_permissions
-            WHERE user_id = :user_id
-              AND feature = :feature
-              AND enabled = 1
+            SELECT 1
+            FROM users u
+            JOIN access_profile_permissions app
+              ON app.profile_id = u.profile_id
+            WHERE u.id = :user_id
+              AND app.feature = :feature
+              AND app.enabled = 1
+              AND u.active = 1
         """), {
             "user_id": user_id,
             "feature": feature,
         }).fetchone()
 
         return row is not None
+
     finally:
         db.close()
 
