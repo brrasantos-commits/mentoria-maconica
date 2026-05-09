@@ -17,6 +17,7 @@
         <th>Perfil</th>
         <th>Descrição</th>
         <th>Status</th>
+        <th>Ações</th>
       </tr>
     </thead>
 
@@ -31,6 +32,20 @@
           {% else %}
             Inativo
           {% endif %}
+        </td>
+        <td>
+          <a class="secondary-btn" href="/admin/perfis/{{ profile.id }}/edit">
+            Editar
+          </a>
+
+          <form method="post"
+                action="/admin/perfis/{{ profile.id }}/delete"
+                style="display:inline;"
+                onsubmit="return confirm('Deseja excluir este perfil? Usuários vinculados ficarão sem perfil.');">
+            <button class="secondary-btn" type="submit">
+              Excluir
+            </button>
+          </form>
         </td>
       </tr>
       {% endfor %}

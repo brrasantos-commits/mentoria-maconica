@@ -141,6 +141,18 @@ def _get_filter_options():
 
     finally:
         db.close()
+
+def _list_profiles():
+    db = SessionLocal()
+    try:
+        return db.execute(text("""
+            SELECT id, name, description, active
+            FROM access_profiles
+            WHERE active = 1
+            ORDER BY name
+        """)).fetchall()
+    finally:
+        db.close()
         
 @router.post("/materials/bulk-cancel")
 async def cancel_bulk_upload(request: Request):
@@ -639,10 +651,10 @@ def new_user_form(request: Request):
             "request": request,
             "user": None,
             "permissions": [],
+            "profiles": _list_profiles(),
             "form_action": "/admin/users/new",
         },
     )
-
 
 @router.post("/users/new")
 def create_user(
@@ -654,6 +666,7 @@ def create_user(
     role: str = Form(...),
     active: bool = Form(False),
     permissions: list[str] = Form([]),
+    profile_id: int = Form(None),
 ):
     _admin_only(request)
 
@@ -675,8 +688,8 @@ def create_user(
 
         db.execute(
             text("""
-            INSERT INTO users (name, username, email, password, role, active)
-            VALUES (:name, :username, :email, :password, :role, :active)
+            INSERT INTO users (name, username, email, password, role, active, profile_id)
+            VALUES (:name, :username, :email, :password, :role, :active, :profile_id)
         """),
             {
                 "name": name.strip(),
@@ -685,19 +698,9 @@ def create_user(
                 "password": hash_password(password.strip()),
                 "role": role,
                 "active": 1 if active else 0,
+                "profile_id": profile_id,
             },
-        )
-        new_user_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
-
-        for permission in permissions:
-            db.execute(text("""
-                INSERT INTO user_permissions (user_id, feature, enabled)
-                VALUES (:user_id, :feature, 1)
-            """), {
-                "user_id": new_user_id,
-                "feature": permission,
-            })
-            
+        )            
         new_user_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
 
         for permission in permissions:
@@ -723,7 +726,7 @@ def edit_user_form(request: Request, user_id: int):
     try:
         row = db.execute(
             text("""
-            SELECT id, name, username, email, role, active
+            SELECT id, name, username, email, role, active, profile_id
             FROM users
             WHERE id = :id
         """),
@@ -740,6 +743,7 @@ def edit_user_form(request: Request, user_id: int):
             "email": row.email,
             "role": row.role,
             "active": bool(row.active),
+            "profile_id": row.profile_id,
         }
 
         permissions_rows = db.execute(text("""
@@ -762,6 +766,7 @@ def edit_user_form(request: Request, user_id: int):
             "user": user,
             "permissions": permissions,
             "form_action": f"/admin/users/{user_id}/edit",
+            "profiles": _list_profiles(),
         },
     )
 
@@ -776,6 +781,7 @@ def update_user(
     role: str = Form(...),
     active: bool = Form(False),
     permissions: list[str] = Form([]),
+    profile_id: int = Form(None),
 ):
     _admin_only(request)
 
@@ -795,6 +801,7 @@ def update_user(
                     password = :password,
                     role = :role,
                     active = :active
+                    profile_id = :profile_id
                 WHERE id = :id
             """),
                 {
@@ -805,6 +812,7 @@ def update_user(
                     "password": hash_password(password.strip()),
                     "role": role,
                     "active": 1 if active else 0,
+                    "profile_id": profile_id,
                 },
             )
         else:
@@ -816,6 +824,7 @@ def update_user(
                     email = :email,
                     role = :role,
                     active = :active
+                    profile_id = :profile_id
                 WHERE id = :id
             """),
                 {
@@ -825,6 +834,7 @@ def update_user(
                     "email": email.strip(),
                     "role": role,
                     "active": 1 if active else 0,
+                    "profile_id": profile_id,
                 },
             )
             db.execute(text("""
@@ -1391,19 +1401,111 @@ def create_profile(
         url="/admin/perfis",
         status_code=303,
     )
-@router.get("/perfis/new", response_class=HTMLResponse)
-def new_profile_form(request: Request):
+
+@router.get("/perfis/{profile_id}/edit", response_class=HTMLResponse)
+def edit_profile_form(request: Request, profile_id: int):
     _admin_only(request)
+
+    db = SessionLocal()
+    try:
+        profile = db.execute(text("""
+            SELECT id, name, description, active
+            FROM access_profiles
+            WHERE id = :id
+        """), {"id": profile_id}).fetchone()
+
+        permissions_rows = db.execute(text("""
+            SELECT feature
+            FROM access_profile_permissions
+            WHERE profile_id = :id
+              AND enabled = 1
+        """), {"id": profile_id}).fetchall()
+
+        permissions = [r.feature for r in permissions_rows]
+    finally:
+        db.close()
 
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_profile_form.html",
         {
             "request": request,
-            "profile": None,
-            "permissions": [],
+            "profile": profile,
+            "permissions": permissions,
             "features": FEATURES,
-            "form_action": "/admin/perfis/new",
+            "form_action": f"/admin/perfis/{profile_id}/edit",
         },
     )
-print("ROTAS ADMIN:", [r.path + " " + ",".join(r.methods) for r in router.routes])
+
+
+@router.post("/perfis/{profile_id}/edit")
+def update_profile(
+    request: Request,
+    profile_id: int,
+    name: str = Form(...),
+    description: str = Form(""),
+    permissions: list[str] = Form([]),
+):
+    _admin_only(request)
+
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            UPDATE access_profiles
+            SET name = :name,
+                description = :description
+            WHERE id = :id
+        """), {
+            "id": profile_id,
+            "name": name.strip(),
+            "description": description.strip(),
+        })
+
+        db.execute(text("""
+            DELETE FROM access_profile_permissions
+            WHERE profile_id = :profile_id
+        """), {"profile_id": profile_id})
+
+        for permission in permissions:
+            db.execute(text("""
+                INSERT INTO access_profile_permissions (profile_id, feature, enabled)
+                VALUES (:profile_id, :feature, 1)
+            """), {
+                "profile_id": profile_id,
+                "feature": permission,
+            })
+
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/perfis", status_code=303)
+
+
+@router.post("/perfis/{profile_id}/delete")
+def delete_profile(request: Request, profile_id: int):
+    _admin_only(request)
+
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            UPDATE users
+            SET profile_id = NULL
+            WHERE profile_id = :profile_id
+        """), {"profile_id": profile_id})
+
+        db.execute(text("""
+            DELETE FROM access_profile_permissions
+            WHERE profile_id = :profile_id
+        """), {"profile_id": profile_id})
+
+        db.execute(text("""
+            DELETE FROM access_profiles
+            WHERE id = :profile_id
+        """), {"profile_id": profile_id})
+
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/perfis", status_code=303)

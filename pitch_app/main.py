@@ -254,6 +254,10 @@ def ensure_access_profiles_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        
+        db.execute(text("ALTER TABLE users ADD COLUMN profile_id INTEGER"))
+    except Exception:
+        pass
 
         db.commit()
     finally:

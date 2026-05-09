@@ -48,6 +48,17 @@
         <option value="seller" {% if user and user.role == 'seller' %}selected{% endif %}>Vendedor</option>
         <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Administrador</option>
       </select>
+      <label for="profile_id">Perfil de Acesso</label>
+      <select id="profile_id" name="profile_id">
+        <option value="">Sem perfil</option>
+
+        {% for profile in profiles %}
+          <option value="{{ profile.id }}"
+            {% if user and user.profile_id == profile.id %}selected{% endif %}>
+            {{ profile.name }}
+          </option>
+        {% endfor %}
+      </select>
     </div>
 
     <label style="display:flex; gap:10px; align-items:center;">
