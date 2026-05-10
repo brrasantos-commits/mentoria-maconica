@@ -1,3 +1,8 @@
+**Integrating git commands**
+
+I need to make sure we add the suggested steps, which include using `git status` and `git log -1 --oneline`. These probably fit in the run section and should follow the checkout step in the workflow. I'll keep the original code intact and just insert the commands where they need to go. The final output will just be the modified YAML code with that additional step included. Alright, I'll get to crafting it!**Integrating git commands**
+
+I need to make sure we add the suggested steps, which include using `git status` and `git log -1 --oneline`. These probably fit in the run section and should follow the checkout step in the workflow. I'll keep the original code intact and just insert the commands where they need to go. The final output will just be the modified YAML code with that additional step included. Alright, I'll get to crafting it!```yaml
 name: railway-smoke
 on:
   workflow_dispatch:
@@ -8,6 +13,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Git status and last commit
+        shell: bash
+        run: |
+          git status
+          git log -1 --oneline
 
       - name: Set up Python
         uses: actions/setup-python@v5
