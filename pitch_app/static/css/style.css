@@ -175,3 +175,30 @@ video[controlsList*="nodownload"] {
   box-shadow: 0 8px 18px rgba(79,70,229,.10);
   background: #f8faff;
 }
+.materials-scroll-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.materials-scroll-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.materials-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.materials-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}

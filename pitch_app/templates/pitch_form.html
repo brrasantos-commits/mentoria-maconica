@@ -28,6 +28,25 @@
       </div>
     </div>
 
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+
+      <button
+        id="submitBtnTop"
+        type="submit"
+        class="primary-btn"
+      >
+        Enviar para análise
+      </button>
+
+      <a
+        class="secondary-btn"
+        href="/estudo"
+      >
+        Voltar ao estudo
+      </a>
+
+    </div>    
+
     <div class="panel-card" style="padding:16px;">
       <div class="top-toolbar">
         <div>
@@ -71,7 +90,10 @@
 
       <div id="pitchSelectionSummary" class="selection-summary" style="margin-bottom:14px;"></div>
 
-      <div id="pitchMaterialsGrid" class="materials-list">
+      <div
+        id="pitchMaterialsGrid"
+        class="materials-scroll-container"
+      >
         {% for material in materials %}
         <label
           class="material-row checkbox-card"
@@ -219,11 +241,36 @@
   document.getElementById("pitchFilterSolution")?.addEventListener("change", applyPitchFilters);
   document.getElementById("pitchSearch")?.addEventListener("input", applyPitchFilters);
 
+  function sortSelectedMaterialsFirst() {
+
+    const container = document.getElementById("pitchMaterialsGrid");
+
+    if (!container) return;
+
+    const items = [...container.querySelectorAll("[data-material-item]")];
+
+    items.sort((a, b) => {
+
+      const aChecked = a.querySelector("input")?.checked;
+      const bChecked = b.querySelector("input")?.checked;
+
+      if (aChecked && !bChecked) return -1;
+      if (!aChecked && bChecked) return 1;
+
+      return 0;
+    });
+
+    items.forEach(item => container.appendChild(item));
+  }
+
   syncPitchCheckboxes();
   applyPitchFilters();
+  sortSelectedMaterialsFirst();
 
   window.addEventListener("materials-updated", () => {
-    syncPitchCheckboxes();
+      syncPitchCheckboxes();
+      sortSelectedMaterialsFirst();
+});
   });
 </script>
 {% endblock %}
