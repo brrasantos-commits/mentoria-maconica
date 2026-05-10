@@ -382,40 +382,6 @@
     </section>
 
     <section>
-      <h2>Critérios avançados</h2>
-      <ul>
-        {% for key, label in [
-          ('elevator_pitch_missao_critica', 'Elevator pitch orientado à missão crítica'),
-          ('dores_da_industria', 'Dores da indústria'),
-          ('proposta_valor_diferenciais', 'Proposta de valor e diferenciais'),
-          ('features_principais', 'Features principais'),
-          ('servicos_tecnocomp', 'Serviços Tecnocomp'),
-          ('referencias_cases', 'Referências e cases'),
-          ('porque_tecnocomp', 'Porque Tecnocomp'),
-          ('proximos_passos', 'Próximos passos'),
-          ('frases_fechamento', 'Frases de fechamento')
-        ] %}
-          {% set item = adv.get(key, {}) %}
-          <li class="note-item">
-            <div class="note-head">
-              <span class="note-title">{{ label }}</span>
-              <span class="note-score">{{ item.get('score', 0) if item else 0 }}</span>
-            </div>
-            <p class="note-body">{{ item.get('justification', '') if item else '' }}</p>
-            {% set evidences = item.get('evidence', []) if item else [] %}
-            {% if evidences %}
-              <ul class="evidence-list">
-                {% for ev in evidences %}
-                  <li>{{ ev }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-
-    <section>
       <h2>Aderência aos materiais</h2>
       <ul>
         {% for item in materials_list %}
