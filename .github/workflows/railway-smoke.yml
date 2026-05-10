@@ -28,11 +28,21 @@ jobs:
           BASE_URL: ${{ secrets.RAILWAY_BASE_URL }}
         run: |
           if [ -z "$BASE_URL" ]; then
-            echo "RAILWAY_BASE_URL secret is not set";
-            exit 1;
+            echo "RAILWAY_BASE_URL secret is not set"
+            exit 1
           fi
 
-          BASE_URL=${BASE_URL%/}
+          # Normalize common copy/paste issues (quotes, whitespace, CRLF)
+          BASE_URL="$(printf '%s' "$BASE_URL" | tr -d '\r' | xargs)"
+          BASE_URL="${BASE_URL%/}"
+
+          # Minimal validation without leaking the secret
+          python - <<'PY'
+          import os
+          u = os.environ.get('BASE_URL', '')
+          print(f"BASE_URL length={len(u)}")
+          print(f"BASE_URL startswith http(s)={u.startswith(('http://','https://'))}")
+          PY
 
           for i in {1..30}; do
             if curl -fsS "$BASE_URL/health" > /dev/null; then
