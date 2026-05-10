@@ -20,6 +20,7 @@ jobs:
           SESSION_SECRET_KEY=ci-secret-key-change-me
           PORT=8000
           OPENAI_API_KEY=dummy
+          SEED_ON_STARTUP=1
           # Avoid accidental admin reset in CI
           RESET_ADMIN_PASSWORD=
           EOF

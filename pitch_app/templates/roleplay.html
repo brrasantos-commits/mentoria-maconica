@@ -20,7 +20,7 @@
   <div id="chat" style="height:400px; overflow:auto; border:1px solid #ddd; padding:12px; margin-bottom:10px;"></div>
 
   <form id="chatForm">
-    <button id="evaluateBtn" class="primary-btn" style="margin-top:10px; width:100%;">
+    <button type="button" id="evaluateBtn" class="primary-btn" style="margin-top:10px; width:100%;">
       Finalizar e Avaliar
     </button>
     <input type="text" id="message" placeholder="Digite sua resposta..." style="width:80%;" required disabled>
@@ -32,7 +32,7 @@
 <script>
 const warning = document.getElementById("warning");
 const input = document.getElementById("message");
-const button = document.querySelector("#chatForm button");
+const sendButton = document.querySelector("#chatForm button[type='submit']");
 
 // 🔥 função central de controle
 function updateRoleplayLock() {
@@ -45,11 +45,11 @@ function updateRoleplayLock() {
   if (!materials || materials.length === 0) {
     warning.style.display = "block";
     input.disabled = true;
-    button.disabled = true;
+    sendButton.disabled = true;
   } else {
     warning.style.display = "none";
     input.disabled = false;
-    button.disabled = false;
+    sendButton.disabled = false;
   }
 }
 
@@ -98,9 +98,18 @@ form.addEventListener("submit", async function(e) {
 
   const data = await res.json();
 
-  history = data.history;
+  console.log("RETORNO ROLEPLAY:", data);
 
-  addMessage("assistant", data.response);
+  history = data.history || history;
+
+  const aiText =
+    data.response ||
+    data.answer ||
+    data.message ||
+    data.detail ||
+    "Não consegui gerar uma resposta agora.";
+
+  addMessage("assistant", aiText);
 });
 
 const evaluateBtn = document.getElementById("evaluateBtn");

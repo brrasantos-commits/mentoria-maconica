@@ -1,5 +1,6 @@
 import os
 import logging
+import shutil
 from pathlib import Path
 from io import BytesIO
 from types import SimpleNamespace
@@ -68,6 +69,11 @@ async def lifespan(app: FastAPI):
     ensure_filtros_table()
     ensure_access_profiles_tables()
 
+    if os.getenv("SEED_ON_STARTUP", "").strip().lower() in {"1", "true", "yes"}:
+        try:
+            seed_initial_data()
+        except Exception as exc:
+            logger.warning(f"Seed initial data failed: {exc}")
 
     logger.info("Application started successfully")
 
@@ -254,11 +260,204 @@ def ensure_access_profiles_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        
-        db.execute(text("ALTER TABLE users ADD COLUMN profile_id INTEGER"))
-    except Exception:
-        pass
 
+        # profile_id is optional and may already exist
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN profile_id INTEGER"))
+        except Exception:
+            pass
+
+        db.commit()
+    finally:
+        db.close()
+
+
+def seed_initial_data():
+    """Idempotent seed for CI/dev environments.
+
+    This exists to make E2E flows deterministic when the database starts empty.
+    It does NOT run unless SEED_ON_STARTUP is enabled.
+    """
+
+    def _seed_profiles_and_permissions(db: Session):
+        # Profiles
+        db.execute(
+            text(
+                """
+                INSERT OR IGNORE INTO access_profiles (name, description, active)
+                VALUES (:name, :description, 1)
+                """
+            ),
+            {"name": "Vendedor", "description": "Perfil padrão de vendedor"},
+        )
+        db.execute(
+            text(
+                """
+                INSERT OR IGNORE INTO access_profiles (name, description, active)
+                VALUES (:name, :description, 1)
+                """
+            ),
+            {"name": "Gestor", "description": "Perfil com acesso ao painel do gestor"},
+        )
+
+        seller_profile_id = db.execute(
+            text("SELECT id FROM access_profiles WHERE name = 'Vendedor'")
+        ).scalar()
+        manager_profile_id = db.execute(
+            text("SELECT id FROM access_profiles WHERE name = 'Gestor'")
+        ).scalar()
+
+        # Permissions for seller
+        seller_features = ["estudo", "roleplay", "pitch", "historico"]
+        for feature in seller_features:
+            db.execute(
+                text(
+                    """
+                    INSERT OR IGNORE INTO access_profile_permissions (profile_id, feature, enabled)
+                    VALUES (:profile_id, :feature, 1)
+                    """
+                ),
+                {"profile_id": seller_profile_id, "feature": feature},
+            )
+
+        # Permissions for manager
+        manager_features = ["painel_gestor"]
+        for feature in manager_features:
+            db.execute(
+                text(
+                    """
+                    INSERT OR IGNORE INTO access_profile_permissions (profile_id, feature, enabled)
+                    VALUES (:profile_id, :feature, 1)
+                    """
+                ),
+                {"profile_id": manager_profile_id, "feature": feature},
+            )
+
+        # Attach profiles to default users
+        db.execute(
+            text(
+                """
+                UPDATE users
+                SET profile_id = :profile_id
+                WHERE username = 'vendedor' AND (profile_id IS NULL OR profile_id = '')
+                """
+            ),
+            {"profile_id": seller_profile_id},
+        )
+
+        # Ensure a manager user exists (optional; useful for E2E)
+        manager_username = os.getenv("SEED_MANAGER_USER", "gestor")
+        manager_password = os.getenv("SEED_MANAGER_PASSWORD", "123456")
+        manager_name = os.getenv("SEED_MANAGER_NAME", "Gestor")
+
+        existing_manager = db.execute(
+            text("SELECT id FROM users WHERE username = :u"),
+            {"u": manager_username},
+        ).fetchone()
+
+        if not existing_manager:
+            from pitch_app.services.auth_service import hash_password
+
+            db.execute(
+                text(
+                    """
+                    INSERT INTO users (name, username, password, role, active, profile_id)
+                    VALUES (:name, :username, :password, 'seller', 1, :profile_id)
+                    """
+                ),
+                {
+                    "name": manager_name,
+                    "username": manager_username,
+                    "password": hash_password(manager_password),
+                    "profile_id": manager_profile_id,
+                },
+            )
+        else:
+            db.execute(
+                text(
+                    """
+                    UPDATE users
+                    SET profile_id = :profile_id, active = 1
+                    WHERE username = :u
+                    """
+                ),
+                {"profile_id": manager_profile_id, "u": manager_username},
+            )
+
+    def _seed_material_files():
+        # Source materials shipped with the repo
+        source_dir = Path(__file__).resolve().parent / "materials"
+        if not source_dir.exists():
+            return
+
+        # Target directory used by the app (usually Railway Volume / data)
+        MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
+
+        for src in source_dir.iterdir():
+            if not src.is_file() or src.name.startswith("."):
+                continue
+            if src.name == "_processed":
+                continue
+
+            dst = MATERIALS_DIR / src.name
+            if not dst.exists():
+                shutil.copy2(src, dst)
+
+    def _seed_material_records(db: Session):
+        # Load metadata if available
+        metadata_path = Path(__file__).resolve().parent / "materials.json"
+        items = []
+        if metadata_path.exists():
+            try:
+                items = json.loads(metadata_path.read_text(encoding="utf-8"))
+            except Exception:
+                items = []
+
+        # If no metadata, do nothing (admin can upload later)
+        if not items:
+            return
+
+        for item in items:
+            filename = (item.get("filename") or "").strip()
+            if not filename:
+                continue
+
+            # Only seed if the file exists in the configured MATERIALS_DIR
+            if not (MATERIALS_DIR / filename).exists():
+                continue
+
+            exists = db.execute(
+                text("SELECT 1 FROM materials WHERE filename = :f"),
+                {"f": filename},
+            ).fetchone()
+            if exists:
+                continue
+
+            db.execute(
+                text(
+                    """
+                    INSERT INTO materials
+                    (title, filename, file_type, industry, solution, description, sort_order, active)
+                    VALUES
+                    (:title, :filename, :file_type, :industry, :solution, :description, :sort_order, 1)
+                    """
+                ),
+                {
+                    "title": (item.get("title") or filename).strip(),
+                    "filename": filename,
+                    "file_type": (item.get("type") or Path(filename).suffix.lower().lstrip(".") or "pdf"),
+                    "industry": (item.get("industry") or "Outros"),
+                    "solution": (item.get("solution") or "Geral"),
+                    "description": "",
+                    "sort_order": int(item.get("sort") or 0),
+                },
+            )
+
+    db = SessionLocal()
+    try:
+        _seed_profiles_and_permissions(db)
+        _seed_material_files()
+        _seed_material_records(db)
         db.commit()
     finally:
         db.close()
