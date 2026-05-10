@@ -1,3 +1,7 @@
+
+import os
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
 from openai import OpenAI
 from pitch_app.services.config import OPENAI_MODEL
 from pitch_app.services.openai_service import get_openai_client
@@ -39,7 +43,7 @@ def generate_ai_response(conversation: list[dict], material_texts: dict[str, str
     try:
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=messages,
             temperature=0.9,
             max_tokens=1200,
