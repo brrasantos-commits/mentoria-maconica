@@ -20,11 +20,54 @@
   <div id="chat" style="height:400px; overflow:auto; border:1px solid #ddd; padding:12px; margin-bottom:10px;"></div>
 
   <form id="chatForm">
-    <button type="button" id="evaluateBtn" class="primary-btn" style="margin-top:10px; width:100%;">
+
+    <div style="
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:10px;
+    ">
+
+      <input
+        type="text"
+        id="message"
+        placeholder="Digite sua resposta..."
+        required
+        disabled
+        style="
+          flex:1;
+          padding:12px;
+          border-radius:10px;
+          border:1px solid #ccc;
+        "
+      >
+
+      <button
+        type="submit"
+        style="
+          padding:12px 20px;
+          border:none;
+          border-radius:10px;
+          cursor:pointer;
+        "
+      >
+        Enviar
+      </button>
+
+    </div>
+
+    <button
+      type="button"
+      id="evaluateBtn"
+      class="primary-btn"
+      style="
+        margin-top:15px;
+        width:100%;
+      "
+    >
       Finalizar e Avaliar
     </button>
-    <input type="text" id="message" placeholder="Digite sua resposta..." style="width:80%;" required disabled>
-    <button type="submit">Enviar</button>
+
   </form>
   <div id="scoreResult" style="margin-top:20px;"></div>
 </section>
