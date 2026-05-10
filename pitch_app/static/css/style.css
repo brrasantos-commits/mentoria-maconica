@@ -202,3 +202,39 @@ video[controlsList*="nodownload"] {
 .materials-scroll-container::-webkit-scrollbar-track {
   background: transparent;
 }
+#pitchMaterialsGrid .material-row {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#pitchMaterialsGrid .material-row input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-right: 14px;
+}
+
+#pitchMaterialsGrid .material-main {
+  flex: 1;
+  text-align: left;
+}
+
+#pitchMaterialsGrid .material-main strong,
+#pitchMaterialsGrid .material-main span,
+#pitchMaterialsGrid .material-main small {
+  text-align: left;
+}
+
+#pitchMaterialsGrid .material-main strong {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+#pitchMaterialsGrid .material-main span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+#pitchMaterialsGrid .material-main small {
+  font-size: 12px;
+  color: #475569;
+  word-break: break-word;
+}
