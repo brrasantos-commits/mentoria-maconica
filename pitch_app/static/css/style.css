@@ -128,3 +128,50 @@ video[controlsList*="nodownload"] {
   user-select: none;
 }
 }
+.materials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.material-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.material-main strong {
+  font-size: 14px;
+}
+
+.material-main span,
+.material-main small {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.material-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.material-row.selected,
+.checkbox-card.selected {
+  border-color: #818cf8;
+  box-shadow: 0 8px 18px rgba(79,70,229,.10);
+  background: #f8faff;
+}

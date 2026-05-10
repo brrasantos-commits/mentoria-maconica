@@ -54,44 +54,28 @@
   </div>
 
   {% if materials %}
-    <div class="materials-grid">
+    <div class="materials-list">
       {% for material in materials %}
-      <article class="material-card" data-material-card data-filename="{{ material.filename }}">
-        <div class="material-head">
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <span class="material-badge">{{ material.type|upper }}</span>
-            {% if material.industry %}
-              <span class="material-badge" style="background:#ecfeff; color:#0f766e; border-color:#ccfbf1;">{{ material.industry }}</span>
-            {% endif %}
-            {% if material.solution %}
-              <span class="material-badge" style="background:#fff7ed; color:#c2410c; border-color:#fed7aa;">{{ material.solution }}</span>
-            {% endif %}
-          </div>
-          <span class="material-badge js-selected-badge" style="display:none; background:#ecfdf5; color:#166534; border-color:#bbf7d0;">Selecionado</span>
+      <article class="material-row" data-material-card data-filename="{{ material.filename }}">
+        <div class="material-main">
+          <strong>{{ material.title }}</strong>
+          <span>{{ material.industry or 'Sem indústria' }} • {{ material.solution or 'Sem solução' }} • {{ material.type|upper }}</span>
+          <small>{{ material.filename }}</small>
         </div>
 
-        <h3 style="margin:0 0 8px; font-size:20px;">{{ material.title }}</h3>
-        <p class="file-name">Arquivo: {{ material.filename }}</p>
+        <div class="material-actions">
+          <span class="material-badge js-selected-badge" style="display:none;">Selecionado</span>
 
-        {% if material.description %}
-          <p class="meta-note" style="margin-top:10px;">{{ material.description }}</p>
-        {% else %}
-          <p class="meta-note" style="margin-top:10px;">Abra este material para estudar e adicioná-lo automaticamente ao pitch.</p>
-        {% endif %}
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
-          <a
-            class="primary-btn"
-            href="/estudo/{{ material.id }}"
-          >
-            Estudar e selecionar
+          <a class="primary-btn" href="/estudo/{{ material.id }}">
+            Estudar
           </a>
+
           <button
             type="button"
             class="secondary-btn"
             onclick="toggleStudySelection('{{ material.filename }}')"
           >
-            Selecionar / desselecionar
+            Selecionar
           </button>
         </div>
       </article>
