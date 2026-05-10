@@ -27,6 +27,7 @@ def generate_ai_response(conversation: list[dict], material_texts: dict[str, str
 
     if material_texts:
         material_context = "\n\nMateriais de estudo selecionados:\n"
+
         for filename, text in material_texts.items():
             material_context += f"\n### {filename}\n{text[:3000]}\n"
 
@@ -35,13 +36,25 @@ def generate_ai_response(conversation: list[dict], material_texts: dict[str, str
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(conversation)
 
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        messages=messages,
-        temperature=0.7,
-    )
+    try:
 
-    return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model="gpt-5.1-mini",
+            messages=messages,
+            temperature=0.9,
+            max_tokens=1200,
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+
+        print("ERRO OPENAI:", str(e))
+
+        return (
+            "A IA está temporariamente indisponível. "
+            "Verifique créditos, billing ou configuração da OpenAI."
+        )
 
 def evaluate_roleplay(conversation: list[dict]) -> dict:
     client: OpenAI = get_openai_client()
@@ -93,21 +106,3 @@ Responda em JSON no formato:
     return json.loads(response.choices[0].message.content)
 
 from openai import RateLimitError
-
-try:
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        temperature=0.7,
-    )
-
-    return response.choices[0].message.content
-
-except RateLimitError:
-    return """
-A IA está temporariamente indisponível por limite de quota da OpenAI.
-Verifique billing e créditos da API.
-"""
-
-except Exception as e:
-    return f"Erro ao gerar resposta da IA: {str(e)}"
