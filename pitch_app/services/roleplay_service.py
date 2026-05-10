@@ -113,28 +113,29 @@ Responda em JSON no formato:
 
     import json
     try:
-    content = response.choices[0].message.content
+        content = response.choices[0].message.content
 
-    print("RETORNO IA EVALUATE:", content)
+        print("RETORNO IA EVALUATE:", content)
 
-    return json.loads(content)
+        return json.loads(content)
 
-except Exception as e:
-    print("ERRO JSON ROLEPLAY:", str(e))
+    except Exception as e:
 
-    return {
-        "score": 0,
-        "clarity": 0,
-        "value": 0,
-        "knowledge": 0,
-        "objections": 0,
-        "closing": 0,
-        "strengths": [
-            "Não foi possível processar a avaliação automaticamente."
-        ],
-        "improvements": [
-            "Verifique se a IA retornou um JSON válido."
-        ]
-    }
+        print("ERRO JSON ROLEPLAY:", str(e))
+
+        return {
+            "score": 0,
+            "clarity": 0,
+            "value": 0,
+            "knowledge": 0,
+            "objections": 0,
+            "closing": 0,
+            "strengths": [
+                "Não foi possível processar a avaliação automaticamente."
+            ],
+            "improvements": [
+                "Verifique se a IA retornou um JSON válido."
+            ]
+        }
 
 from openai import RateLimitError
