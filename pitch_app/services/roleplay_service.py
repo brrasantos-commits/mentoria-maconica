@@ -39,7 +39,7 @@ def generate_ai_response(conversation: list[dict], material_texts: dict[str, str
     try:
 
         response = client.chat.completions.create(
-            model="gpt-5.1-mini",
+            model="gpt-4o-mini",
             messages=messages,
             temperature=0.9,
             max_tokens=1200,
