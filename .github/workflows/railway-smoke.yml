@@ -1,13 +1,6 @@
-**Modifying installation command**
-
-I need to output a complete modified file with just the code. The suggested edit is to change the install command for Playwright from `python -m playwright install --with-deps chromium` to `python -m playwright install chromium`. I think the pip install line should remain the same since the original is already correct. I’ll provide the YAML file and ensure I output the raw YAML without fences, as the user prefers just the code. Let's do this!**Modifying installation command**
-
-I need to output a complete modified file with just the code. The suggested edit is to change the install command for Playwright from `python -m playwright install --with-deps chromium` to `python -m playwright install chromium`. I think the pip install line should remain the same since the original is already correct. I’ll provide the YAML file and ensure I output the raw YAML without fences, as the user prefers just the code. Let's do this!name: railway-smoke
+name: railway-smoke
 on:
   workflow_dispatch:
-  schedule:
-    # Every day at 06:00 UTC
-    - cron: "0 6 * * *"
 
 jobs:
   smoke:
@@ -26,7 +19,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest httpx pytest-playwright
-          python -m playwright install chromium
+          python -m playwright install --with-deps chromium
 
       - name: Wait for Railway health
         shell: bash
