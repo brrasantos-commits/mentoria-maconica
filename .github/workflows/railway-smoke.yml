@@ -1,0 +1,82 @@
+**Modifying installation command**
+
+I need to output a complete modified file with just the code. The suggested edit is to change the install command for Playwright from `python -m playwright install --with-deps chromium` to `python -m playwright install chromium`. I think the pip install line should remain the same since the original is already correct. I’ll provide the YAML file and ensure I output the raw YAML without fences, as the user prefers just the code. Let's do this!**Modifying installation command**
+
+I need to output a complete modified file with just the code. The suggested edit is to change the install command for Playwright from `python -m playwright install --with-deps chromium` to `python -m playwright install chromium`. I think the pip install line should remain the same since the original is already correct. I’ll provide the YAML file and ensure I output the raw YAML without fences, as the user prefers just the code. Let's do this!name: railway-smoke
+on:
+  workflow_dispatch:
+  schedule:
+    # Every day at 06:00 UTC
+    - cron: "0 6 * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest httpx pytest-playwright
+          python -m playwright install chromium
+
+      - name: Wait for Railway health
+        shell: bash
+        env:
+          BASE_URL: ${{ secrets.RAILWAY_BASE_URL }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "RAILWAY_BASE_URL secret is not set";
+            exit 1;
+          fi
+
+          BASE_URL=${BASE_URL%/}
+
+          for i in {1..30}; do
+            if curl -fsS "$BASE_URL/health" > /dev/null; then
+              echo "Railway app is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Railway app did not become healthy in time"
+          curl -v "$BASE_URL/health" || true
+          exit 1
+
+      - name: Run API smoke tests against Railway
+        shell: bash
+        env:
+          BASE_URL: ${{ secrets.RAILWAY_BASE_URL }}
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          pytest -q tests/api
+
+      - name: Run UI E2E smoke tests against Railway
+        shell: bash
+        env:
+          BASE_URL: ${{ secrets.RAILWAY_BASE_URL }}
+          E2E_ADMIN_USER: ${{ secrets.E2E_ADMIN_USER }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          pytest -q tests/e2e --browser chromium --tracing retain-on-failure --screenshot only-on-failure
+
+      - name: Upload Playwright artifacts (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+
