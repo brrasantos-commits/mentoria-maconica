@@ -575,7 +575,12 @@
           Minha Evolução
         </a>
 
-        {% if request.session.get("user_role") == "admin" %}
+        {% set permissions = request.session.get("permissions", []) %}
+
+        {% if request.session.get("user_role") == "admin"
+          or "admin_materiais" in permissions
+          or "admin_filtros" in permissions
+          or "painel_gestor" in permissions %}
 
         <div class="admin-menu">
           <button type="button" class="nav-link admin-menu-btn" onclick="toggleAdminMenu(event)">
@@ -583,28 +588,41 @@
           </button>
 
           <div class="admin-menu-dropdown">
+
+            {% if request.session.get("user_role") == "admin"
+              or "admin_materiais" in permissions %}
             <a class="{% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
               href="/admin/materials">📚 Materiais</a>
+            {% endif %}
 
+            {% if request.session.get("user_role") == "admin" %}
             <a class="{% if request.url.path.startswith('/admin/users') %}active{% endif %}"
               href="/admin/users">👥 Usuários</a>
 
-            <a href="/admin/perfis">
-              🛡️ Perfis
-            </a>
+            <a class="{% if request.url.path.startswith('/admin/perfis') %}active{% endif %}"
+              href="/admin/perfis">🛡️ Perfis</a>
+            {% endif %}
 
+            {% if request.session.get("user_role") == "admin"
+              or "admin_filtros" in permissions %}
             <a class="{% if request.url.path.startswith('/admin/filtros') %}active{% endif %}"
               href="/admin/filtros">🧩 Filtros</a>
+            {% endif %}
 
+            {% if request.session.get("user_role") == "admin" %}
             <a class="{% if request.url.path.startswith('/admin/dashboard') %}active{% endif %}"
               href="/admin/dashboard">📊 Dashboard</a>
+            {% endif %}
 
-            <a href="/admin/gestor"
-              class="{% if request.url.path.startswith('/admin/gestor') %}active{% endif %}">
-              📈 Painel do Gestor
-            </a>
+            {% if request.session.get("user_role") == "admin"
+              or "painel_gestor" in permissions %}
+            <a class="{% if request.url.path.startswith('/admin/gestor') %}active{% endif %}"
+              href="/admin/gestor">📈 Painel do Gestor</a>
+            {% endif %}
+
           </div>
         </div>
+
         {% endif %}
 
         {% if request.session.get("user_logged") %}

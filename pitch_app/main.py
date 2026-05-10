@@ -553,6 +553,19 @@ async def login(
     if user:
         set_user_session(request, user["id"], user["name"], user["role"])
 
+        permissions_rows = db.execute(text("""
+            SELECT app.feature
+            FROM users u
+            JOIN access_profile_permissions app
+            ON app.profile_id = u.profile_id
+            WHERE u.id = :user_id
+            AND app.enabled = 1
+        """), {
+            "user_id": user["id"]
+        }).fetchall()
+
+        request.session["permissions"] = [r.feature for r in permissions_rows]
+
         if user["role"] == "admin":
             return RedirectResponse(url="/admin/materials", status_code=303)
 
