@@ -84,6 +84,11 @@ Também forneça:
 - pontos fortes
 - pontos de melhoria
 
+Responda SOMENTE em JSON válido.
+Não escreva texto antes ou depois do JSON.
+Não use markdown.
+Não use ```json.
+
 Responda em JSON no formato:
 {
   "score": 0,
@@ -107,6 +112,29 @@ Responda em JSON no formato:
     )
 
     import json
-    return json.loads(response.choices[0].message.content)
+    try:
+    content = response.choices[0].message.content
+
+    print("RETORNO IA EVALUATE:", content)
+
+    return json.loads(content)
+
+except Exception as e:
+    print("ERRO JSON ROLEPLAY:", str(e))
+
+    return {
+        "score": 0,
+        "clarity": 0,
+        "value": 0,
+        "knowledge": 0,
+        "objections": 0,
+        "closing": 0,
+        "strengths": [
+            "Não foi possível processar a avaliação automaticamente."
+        ],
+        "improvements": [
+            "Verifique se a IA retornou um JSON válido."
+        ]
+    }
 
 from openai import RateLimitError
