@@ -80,6 +80,26 @@ form {
   width: 100%;
 }
 
+td form,
+.table-actions form {
+  display: inline-flex;
+  width: auto;
+  gap: 6px;
+  margin: 0;
+}
+
+td form button,
+.table-actions form button {
+  margin-top: 0;
+  width: auto;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+td button {
+  max-width: 140px;
+}
+
 input[type=text],
 input[type=file] {
   width: 100%;
