@@ -33,30 +33,41 @@ def evaluate_pitch(
             {'role': 'user', 'content': user_prompt},
         ],
         response_format={'type': 'json_schema', 'json_schema': evaluation_schema},
-        temperature=0,
+        temperature=0.1,
+        max_tokens=4000,
     )
     
     # Log usage
-    if db and response.usage:
-        try:
-            from pitch_app.services.usage_tracking_service import log_openai_usage
-            log_openai_usage(
-                db=db,
-                operation="pitch_evaluation",
-                tokens_used=response.usage.total_tokens,
-                model=OPENAI_MODEL,
-                user_id=user_id,
-                metadata={
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                    "materials_count": len(material_names)
-                }
-            )
-        except Exception as e:
-            # Don't fail the request if logging fails
-            print(f"Warning: Failed to log OpenAI usage: {e}")
-    
     content = response.choices[0].message.content
+
+    print("=== RETORNO IA AVALIAÇÃO ===")
+    print(content)
+    print("=== FIM RETORNO IA ===")
+
     if not content:
-        raise AppError('O modelo não retornou uma avaliação válida.', status_code=500)
-    return json.loads(content)
+        raise AppError(
+            'O modelo não retornou uma avaliação válida.',
+            status_code=500
+        )
+
+    try:
+
+        return json.loads(content)
+
+    except Exception as e:
+
+        print("ERRO JSON OPENAI:", str(e))
+
+        return {
+            "final_score": 0,
+            "status": "Erro",
+            "analysis_confidence": 0,
+            "evaluation": {
+                "strengths": [
+                    "Não foi possível processar a avaliação."
+                ],
+                "improvements": [
+                    "A IA retornou um JSON inválido."
+                ]
+            }
+        }
