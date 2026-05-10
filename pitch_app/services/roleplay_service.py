@@ -91,3 +91,23 @@ Responda em JSON no formato:
 
     import json
     return json.loads(response.choices[0].message.content)
+
+from openai import RateLimitError
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.7,
+    )
+
+    return response.choices[0].message.content
+
+except RateLimitError:
+    return """
+A IA está temporariamente indisponível por limite de quota da OpenAI.
+Verifique billing e créditos da API.
+"""
+
+except Exception as e:
+    return f"Erro ao gerar resposta da IA: {str(e)}"
