@@ -96,7 +96,7 @@
       >
         {% for material in materials %}
         <label
-          class="material-row checkbox-card"
+          class="material-row checkbox-card {% if material.filename in selected_materials %}selected{% endif %}"
           data-material-item
           data-filename="{{ material.filename }}"
           data-title="{{ material.title|lower }}"
@@ -107,6 +107,7 @@
             type="checkbox"
             class="pitch-material-checkbox"
             value="{{ material.filename }}"
+            {% if material.filename in selected_materials %}checked{% endif %}
           >
 
           <div class="material-main">
