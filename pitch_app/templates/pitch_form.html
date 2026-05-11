@@ -16,9 +16,7 @@
       class="panel-card"
       style="display:grid; gap:18px;"
       onsubmit="
-        syncHiddenMaterialsSelect();
-
-        if (!document.getElementById('materialsHiddenSelect').options.length) {
+        if (!document.querySelectorAll('.pitch-material-checkbox:checked').length) {
           alert('Selecione pelo menos um material de apoio antes de enviar para análise.');
           return false;
         }
@@ -123,6 +121,7 @@
         >
           <input
             type="checkbox"
+            name="materials"
             class="pitch-material-checkbox"
             value="{{ material.filename }}"
             {% if material.filename in selected_materials %}checked{% endif %}
@@ -137,7 +136,7 @@
         {% endfor %}
       </div>
 
-      <select id="materialsHiddenSelect" name="materials" multiple hidden></select>
+      <select id="materialsHiddenSelect" multiple hidden></select>
     </div>
 
     <div class="card-note">
