@@ -15,7 +15,16 @@
   <form method="post" action="/analyze" enctype="multipart/form-data"
       class="panel-card"
       style="display:grid; gap:18px;"
-      onsubmit="document.getElementById('submitBtn').disabled=true; document.getElementById('submitBtn').innerText='Enviando...';">
+      onsubmit="
+        document.getElementById('submitBtn')?.setAttribute('disabled','disabled');
+        document.getElementById('submitBtnTop')?.setAttribute('disabled','disabled');
+
+        if (document.getElementById('submitBtn'))
+          document.getElementById('submitBtn').innerText='Enviando...';
+
+        if (document.getElementById('submitBtnTop'))
+          document.getElementById('submitBtnTop').innerText='Enviando...';
+      "onsubmit="document.getElementById('submitBtn').disabled=true; document.getElementById('submitBtn').innerText='Enviando...';">
     <div class="form-row">
       <div>
         <label for="seller_name">Nome do vendedor</label>
