@@ -50,7 +50,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ```env
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
-MAX_VIDEO_SIZE_MB=100
+MAX_VIDEO_SIZE_MB=70
 MAX_TEXT_CHARS_PER_MATERIAL=4000
 AUDIO_SAMPLE_RATE=16000
 AUDIO_CHANNELS=1

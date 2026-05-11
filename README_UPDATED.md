@@ -52,7 +52,7 @@ SESSION_SECRET_KEY=gere-uma-chave-aleatoria-segura-aqui
 
 # OPCIONAL (valores padrão)
 OPENAI_MODEL=gpt-4o-mini
-MAX_VIDEO_SIZE_MB=100
+MAX_VIDEO_SIZE_MB=70
 ```
 
 **⚠️ IMPORTANTE**: Gere uma secret key segura:
@@ -132,7 +132,7 @@ OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 SESSION_SECRET_KEY=sua-chave-secreta
 
 # Limites
-MAX_VIDEO_SIZE_MB=100
+MAX_VIDEO_SIZE_MB=70
 MAX_TEXT_CHARS_PER_MATERIAL=4000
 
 # Áudio

@@ -1075,11 +1075,12 @@ async def upload_bulk_materials(
 
     UPLOAD_CANCEL_FLAG["cancel"] = False
 
-    # Always write to the configured materials directory (Railway volume / APP_DATA_DIR)
+        # Always write to the configured materials directory (Railway volume / APP_DATA_DIR)
     MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 
-    max_upload_mb = int(os.getenv("MAX_BULK_UPLOAD_MB", "50"))
+    max_upload_mb = int(os.getenv("MAX_BULK_UPLOAD_MB", "70"))
     max_upload_bytes = max_upload_mb * 1024 * 1024
+
 
     for file in files:
         if UPLOAD_CANCEL_FLAG["cancel"]:
