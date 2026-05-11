@@ -876,6 +876,9 @@ def bulk_import_form(request: Request):
 
     industry_options, solution_options = _get_filter_options()
 
+    bulk_import_errors = request.session.pop("bulk_import_errors", None)
+
+
     return request.app.state.templates.TemplateResponse(
         request,
         "admin_bulk_import.html",
@@ -884,33 +887,46 @@ def bulk_import_form(request: Request):
             "materials": new_materials,
             "industry_options": industry_options,
             "solution_options": solution_options,
+            "bulk_import_errors": bulk_import_errors or [],
         },
     )
 
+
 @router.post("/materials/bulk-import")
 async def bulk_import_submit(request: Request):
-    """Process bulk import of materials"""
+    """Process bulk import of materials."""
     _admin_only(request)
 
     from pitch_app.services.bulk_import_service import bulk_import_materials
 
-    # Get form data
     form_data = await request.form()
 
-    # Parse materials from form
+    # Parse selected rows from form
+    rows = form_data.getlist("row[]")
     materials = []
-    filenames = form_data.getlist("filename[]")
 
-    for filename in filenames:
+    for row in rows:
+        row_id = (row or "").strip()
+        if not row_id:
+            continue
+
+        filename = (form_data.get(f"row_filename_{row_id}") or "").strip()
         if not filename:
             continue
 
-        # Get data for this material
-        title = form_data.get(f"title_{filename}", "").strip()
-        file_type = form_data.get(f"file_type_{filename}", "").strip()
-        industry = form_data.get(f"industry_{filename}", "").strip()
-        solution = form_data.get(f"solution_{filename}", "").strip()
-        description = form_data.get(f"description_{filename}", "").strip()
+        title = (form_data.get(f"title_{row_id}") or "").strip()
+        file_type = (form_data.get(f"file_type_{row_id}") or "").strip()
+        industry = (form_data.get(f"industry_{row_id}") or "").strip()
+        solution = (form_data.get(f"solution_{row_id}") or "").strip()
+        description = (form_data.get(f"description_{row_id}") or "").strip()
+        sort_order_raw = (form_data.get(f"sort_order_{row_id}") or "").strip()
+
+        sort_order_value = None
+        if sort_order_raw:
+            try:
+                sort_order_value = int(sort_order_raw)
+            except Exception:
+                sort_order_value = None
 
         if title and file_type:
             materials.append(
@@ -921,21 +937,29 @@ async def bulk_import_submit(request: Request):
                     "industry": industry if industry else None,
                     "solution": solution if solution else None,
                     "description": description,
+                    "sort_order": sort_order_value,
                 }
             )
 
-    # Import materials
     db = SessionLocal()
     try:
         result = bulk_import_materials(db, materials)
     finally:
         db.close()
 
-    # Redirect with success message
+    if result.get("errors"):
+        request.session["bulk_import_errors"] = result["errors"]
+
     return RedirectResponse(
-        url=f"/admin/materials?imported={result['imported']}&skipped={result['skipped']}&errors={len(result['errors'])}",
+        url=(
+            f"/admin/materials/bulk-import?imported={result['imported']}"
+            f"&skipped={result['skipped']}"
+            f"&errors={len(result.get('errors', []))}"
+        ),
         status_code=303,
     )
+
+
 
 
 # ============================================================================
@@ -1041,42 +1065,45 @@ async def multi_upload_page(request: Request):
 @router.post("/materials/upload-bulk")
 async def upload_bulk_materials(
     request: Request,
-    files: list[UploadFile] = File(...)
+    files: list[UploadFile] | None = File(default=None),
 ):
     _admin_only(request)
 
+    # Avoid FastAPI 422 when the field is missing; return a clearer 400 instead
+    if not files:
+        raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
+
     UPLOAD_CANCEL_FLAG["cancel"] = False
 
-    upload_dir = "data/materials"
-    os.makedirs(upload_dir, exist_ok=True)
+    # Always write to the configured materials directory (Railway volume / APP_DATA_DIR)
+    MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 
-    MAX_UPLOAD_MB = 50
-    MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
+    max_upload_mb = int(os.getenv("MAX_BULK_UPLOAD_MB", "50"))
+    max_upload_bytes = max_upload_mb * 1024 * 1024
 
     for file in files:
         if UPLOAD_CANCEL_FLAG["cancel"]:
             print("Upload em lote cancelado pelo usuário.")
             break
 
-        filename = file.filename or ""
-
+        filename = (file.filename or "").strip()
         if not filename:
             continue
 
         content = await file.read()
 
-        if len(content) > MAX_UPLOAD_BYTES:
+        if len(content) > max_upload_bytes:
             raise HTTPException(
                 status_code=400,
-                detail=f"Arquivo muito grande: {filename}. Máximo permitido: {MAX_UPLOAD_MB}MB."
+                detail=f"Arquivo muito grande: {filename}. Máximo permitido: {max_upload_mb}MB.",
             )
 
-        file_path = os.path.join(upload_dir, filename)
-
-        with open(file_path, "wb") as f:
+        dest = MATERIALS_DIR / Path(filename).name
+        with dest.open("wb") as f:
             f.write(content)
 
     return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
+
 
 
 @router.post("/materials/upload-single")
@@ -1263,9 +1290,17 @@ async def discard_bulk_materials(request: Request):
     _admin_only(request)
 
     form_data = await request.form()
-    filenames = form_data.getlist("filename[]")
+    rows = form_data.getlist("row[]")
 
-    for filename in filenames:
+    for row in rows:
+        row_id = (row or "").strip()
+        if not row_id:
+            continue
+
+        filename = (form_data.get(f"row_filename_{row_id}") or "").strip()
+        if not filename:
+            continue
+
         safe_name = Path(filename).name
         file_path = MATERIALS_DIR / safe_name
 
@@ -1273,6 +1308,7 @@ async def discard_bulk_materials(request: Request):
             file_path.unlink()
 
     return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
+
 
 @router.get("/gestor", response_class=HTMLResponse)
 def manager_dashboard(request: Request):

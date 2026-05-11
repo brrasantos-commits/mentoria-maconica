@@ -10,7 +10,8 @@
     <h3>Arraste e solte os arquivos aqui</h3>
     <p style="color:#6b7280;">ou clique para selecionar múltiplos arquivos</p>
 
-    <input id="fileInput" type="file" name="files" multiple style="display:none;">
+        <input id="fileInput" type="file" name="files" multiple accept=".pdf,.mp4,.webm,.mov,.avi,.mkv" style="display:none;">
+
 
     <div id="fileList" style="margin-top:12px; font-size:14px;"></div>
 
@@ -36,8 +37,33 @@
     </div>
   </div>
 
+    {% set imported_count = request.query_params.get('imported') %}
+  {% set skipped_count = request.query_params.get('skipped') %}
+  {% set errors_count = request.query_params.get('errors') %}
+
+  {% if imported_count or skipped_count or errors_count %}
+    <div class="panel-card" style="margin-bottom:20px;">
+      <strong>Última importação</strong>
+      <div class="hint" style="margin-top:6px;">
+        Importados: {{ imported_count or 0 }} | Pulados: {{ skipped_count or 0 }} | Erros: {{ errors_count or 0 }}
+      </div>
+
+      {% if bulk_import_errors %}
+        <div class="card-note" style="margin-top:14px; background:#fef2f2; border-color:#fecaca; color:#991b1b;">
+          <strong>Erros encontrados</strong>
+          <ul style="margin:10px 0 0; padding-left:18px;">
+            {% for err in bulk_import_errors %}
+              <li style="margin:6px 0;">{{ err }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
   {% if materials %}
   <form method="post" action="/admin/materials/bulk-import">
+
     <div class="panel-card" style="margin-bottom:20px;">
       <div class="top-toolbar">
         <div>
@@ -54,14 +80,17 @@
     {% for material in materials %}
     <div class="panel-card" style="margin-bottom:16px; border-left:4px solid #4f46e5;">
       <div style="display:flex; gap:16px; align-items:flex-start;">
-        <input 
+                <input 
           type="checkbox" 
-          name="filename[]" 
-          value="{{ material.filename }}"
+          name="row[]" 
+          value="{{ loop.index }}"
           id="check_{{ loop.index }}"
           style="margin-top:4px; width:20px; height:20px; accent-color:#4f46e5;"
           checked
         >
+
+        <input type="hidden" name="row_filename_{{ loop.index }}" value="{{ material.filename }}">
+
         
         <div style="flex:1;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -73,23 +102,39 @@
             </div>
           </div>
 
-          <div class="form-row" style="gap:12px;">
+                    <div class="form-row" style="gap:12px;">
             <div>
-              <label for="title_{{ material.filename }}">Título *</label>
-              <input 
+              <label for="title_{{ loop.index }}">Título *</label>
+                            <input 
                 type="text" 
-                id="title_{{ material.filename }}"
-                name="title_{{ material.filename }}"
+                id="title_{{ loop.index }}"
+                name="title_{{ loop.index }}"
                 value="{{ material.suggested_title }}"
                 required
               >
+
             </div>
 
-            <input type="hidden" name="file_type_{{ material.filename }}" value="{{ material.file_type }}">
+            <div>
+              <label for="sort_order_{{ loop.index }}">Ordem de exibição</label>
+                            <input
+                type="number"
+                id="sort_order_{{ loop.index }}"
+                name="sort_order_{{ loop.index }}"
+                value="{{ material.suggested_sort_order if material.suggested_sort_order is defined else '' }}"
+                min="0"
+                step="1"
+              >
+
+            </div>
+
+                        <input type="hidden" name="file_type_{{ loop.index }}" value="{{ material.file_type }}">
+
 
             <div>
-              <label for="industry_{{ material.filename }}">Indústria</label>
-              <select id="industry_{{ material.filename }}" name="industry_{{ material.filename }}">
+              <label for="industry_{{ loop.index }}">Indústria</label>
+                            <select id="industry_{{ loop.index }}" name="industry_{{ loop.index }}">
+
                 <option value="">Selecione...</option>
                 {% for option in industry_options %}
                 <option value="{{ option }}" {% if material.suggested_industry == option %}selected{% endif %}>
@@ -100,8 +145,9 @@
             </div>
 
             <div>
-              <label for="solution_{{ material.filename }}">Solução</label>
-              <select id="solution_{{ material.filename }}" name="solution_{{ material.filename }}">
+              <label for="solution_{{ loop.index }}">Solução</label>
+                            <select id="solution_{{ loop.index }}" name="solution_{{ loop.index }}">
+
                 <option value="">Selecione...</option>
                 {% for option in solution_options %}
                 <option value="{{ option }}" {% if material.suggested_solution == option %}selected{% endif %}>
@@ -112,11 +158,14 @@
             </div>
           </div>
 
+
           <div style="margin-top:12px;">
-            <label for="description_{{ material.filename }}">Descrição</label>
+                        <label for="description_{{ loop.index }}">Descrição</label>
             <textarea 
-              id="description_{{ material.filename }}"
-              name="description_{{ material.filename }}"
+              id="description_{{ loop.index }}"
+                            name="description_{{ loop.index }}"
+
+
               rows="2"
               style="width:100%; border:1px solid #d1d5db; border-radius:12px; padding:12px; font-size:14px;"
             ></textarea>
@@ -139,9 +188,9 @@
         🗑️ Descartar Selecionados
       </button>
 
-<a class="secondary-btn" href="/admin/materials">Voltar</a>
 
 <a class="secondary-btn" href="/admin/materials">Voltar</a>
+
     </div>
   </form>
 
@@ -160,13 +209,14 @@
 </section>
 
 <script>
-  function selectAll() {
-    document.querySelectorAll('input[name="filename[]"]').forEach(cb => cb.checked = true);
+    function selectAll() {
+    document.querySelectorAll('input[name="row[]"]').forEach(cb => cb.checked = true);
   }
 
   function deselectAll() {
-    document.querySelectorAll('input[name="filename[]"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="row[]"]').forEach(cb => cb.checked = false);
   }
+
 </script>
 
 <script>
@@ -194,12 +244,21 @@
     dropZone.style.background = "transparent";
   });
 
-  dropZone.addEventListener("drop", function(e) {
+    dropZone.addEventListener("drop", function(e) {
     e.preventDefault();
     dropZone.style.background = "transparent";
-    fileInput.files = e.dataTransfer.files;
+
+    // Some browsers don't allow setting input.files programmatically.
+    // We still show the list, but users should prefer clicking to pick files if drop doesn't work.
+    try {
+      fileInput.files = e.dataTransfer.files;
+    } catch (err) {
+      console.warn("Could not set fileInput.files via drag&drop:", err);
+    }
+
     showFiles();
   });
+
 
   fileInput.addEventListener("change", showFiles);
 
@@ -229,13 +288,30 @@
       }
     };
 
-    xhr.onload = function() {
+        xhr.onload = function() {
       if (xhr.status === 303 || xhr.status === 200) {
         window.location.href = "/admin/materials/bulk-import";
-      } else {
-        alert("Erro no upload");
+        return;
       }
+
+      let message = `Erro no upload (HTTP ${xhr.status}).`;
+
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (data && data.detail) {
+          message += `\n\n${data.detail}`;
+        } else {
+          message += `\n\n${xhr.responseText}`;
+        }
+      } catch (e) {
+        if (xhr.responseText) {
+          message += `\n\n${xhr.responseText}`;
+        }
+      }
+
+      alert(message);
     };
+
 
     xhr.send(formData);
   });
