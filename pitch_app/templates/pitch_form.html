@@ -16,6 +16,13 @@
       class="panel-card"
       style="display:grid; gap:18px;"
       onsubmit="
+        syncHiddenMaterialsSelect();
+
+        if (!document.getElementById('materialsHiddenSelect').options.length) {
+          alert('Selecione pelo menos um material de apoio antes de enviar para análise.');
+          return false;
+        }
+
         document.getElementById('submitBtn')?.setAttribute('disabled','disabled');
         document.getElementById('submitBtnTop')?.setAttribute('disabled','disabled');
 
@@ -24,7 +31,9 @@
 
         if (document.getElementById('submitBtnTop'))
           document.getElementById('submitBtnTop').innerText='Enviando...';
-      "onsubmit="document.getElementById('submitBtn').disabled=true; document.getElementById('submitBtn').innerText='Enviando...';">
+
+        return true;
+      ">
     <div class="form-row">
       <div>
         <label for="seller_name">Nome do vendedor</label>
@@ -128,7 +137,7 @@
         {% endfor %}
       </div>
 
-      <select id="materialsHiddenSelect" name="materials" multiple hidden required></select>
+      <select id="materialsHiddenSelect" name="materials" multiple hidden></select>
     </div>
 
     <div class="card-note">
