@@ -13,30 +13,112 @@
   </div>
 
   {% if rows %}
-  <div class="panel-card">
-    <table style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="text-align:left;">Vendedor</th>
-          <th style="text-align:left;">Avaliações</th>
-          <th style="text-align:left;">Média</th>
-          <th style="text-align:left;">Melhor nota</th>
-          <th style="text-align:left;">Última avaliação</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-        <tr>
-          <td>{{ row.seller_name }}</td>
-          <td>{{ row.total_evaluations }}</td>
-          <td>{{ row.avg_score }}</td>
-          <td>{{ row.best_score }}</td>
-          <td>{{ row.last_evaluation }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <div class="panel-card" style="margin-bottom:18px;">
+      <div class="top-toolbar" style="margin-bottom:12px;">
+        <div>
+          <strong>Ranking de vendedores (maior média → menor média)</strong>
+          <div class="hint">Ordenação por média e, em caso de empate, por número de avaliações.</div>
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; width:60px;">#</th>
+            <th style="text-align:left;">Vendedor</th>
+            <th style="text-align:left;">Avaliações</th>
+            <th style="text-align:left;">Média</th>
+            <th style="text-align:left;">Melhor nota</th>
+            <th style="text-align:left;">Última avaliação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ row.seller_name }}</td>
+            <td>{{ row.total_evaluations }}</td>
+            <td>{{ row.avg_score }}</td>
+            <td>{{ row.best_score }}</td>
+            <td>{{ row.last_evaluation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if solution_overall %}
+    <div class="panel-card" style="margin-bottom:18px;">
+      <div class="top-toolbar" style="margin-bottom:12px;">
+        <div>
+          <strong>Quebra geral por tipo de solução</strong>
+          <div class="hint">A média é calculada com base nas avaliações que utilizaram ao menos 1 material daquela solução.</div>
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Solução</th>
+            <th style="text-align:left;">Avaliações</th>
+            <th style="text-align:left;">Média</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in solution_overall %}
+          <tr>
+            <td>{{ item.solution }}</td>
+            <td>{{ item.total_evaluations }}</td>
+            <td>{{ item.avg_score }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if solution_by_seller %}
+    <div class="panel-card">
+      <div class="top-toolbar" style="margin-bottom:12px;">
+        <div>
+          <strong>Detalhe por vendedor (média por solução)</strong>
+          <div class="hint">Clique para expandir e ver a quebra por solução para cada vendedor.</div>
+        </div>
+      </div>
+
+      {% for seller_name, items in solution_by_seller.items() %}
+        <details style="border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; margin-bottom:10px;">
+          <summary style="cursor:pointer; font-weight:700;">{{ seller_name }}</summary>
+
+          {% if items %}
+          <div style="margin-top:12px; overflow:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;">Solução</th>
+                  <th style="text-align:left;">Avaliações</th>
+                  <th style="text-align:left;">Média</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in items %}
+                <tr>
+                  <td>{{ item.solution }}</td>
+                  <td>{{ item.total_evaluations }}</td>
+                  <td>{{ item.avg_score }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="hint" style="margin-top:10px;">Sem dados suficientes para calcular a quebra por solução.</div>
+          {% endif %}
+        </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+
   {% else %}
     <div class="empty-state">Ainda não existem avaliações registradas.</div>
   {% endif %}

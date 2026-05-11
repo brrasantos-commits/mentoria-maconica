@@ -2,6 +2,8 @@ UPLOAD_CANCEL_FLAG = {"cancel": False}
 from pathlib import Path
 import shutil
 import os
+import json
+from collections import defaultdict
 
 from pitch_app.services.auth_service import verify_password
 from pitch_app.services.auth_service import hash_password
@@ -1075,7 +1077,7 @@ async def upload_bulk_materials(
 
     UPLOAD_CANCEL_FLAG["cancel"] = False
 
-        # Always write to the configured materials directory (Railway volume / APP_DATA_DIR)
+    # Always write to the configured materials directory (Railway volume / APP_DATA_DIR)
     MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 
     max_upload_mb = int(os.getenv("MAX_BULK_UPLOAD_MB", "70"))
@@ -1083,6 +1085,7 @@ async def upload_bulk_materials(
 
 
     for file in files:
+
         if UPLOAD_CANCEL_FLAG["cancel"]:
             print("Upload em lote cancelado pelo usuário.")
             break
@@ -1318,17 +1321,125 @@ def manager_dashboard(request: Request):
 
     db = SessionLocal()
     try:
-        rows = db.execute(text("""
-            SELECT 
-                seller_name,
-                COUNT(*) AS total_evaluations,
-                ROUND(AVG(final_score), 1) AS avg_score,
-                MAX(final_score) AS best_score,
-                MAX(created_at) AS last_evaluation
-            FROM pitch_evaluations
-            GROUP BY seller_name
-            ORDER BY avg_score DESC
-        """)).fetchall()
+        # Ranking por média (maior -> menor)
+        ranking_rows = db.execute(
+            text(
+                """
+                SELECT
+                    seller_name,
+                    COUNT(*) AS total_evaluations,
+                    AVG(final_score) AS avg_score,
+                    MAX(final_score) AS best_score,
+                    MAX(created_at) AS last_evaluation
+                FROM pitch_evaluations
+                GROUP BY seller_name
+                ORDER BY avg_score DESC
+                """
+            )
+        ).fetchall()
+
+        # Mapa filename -> solution (para quebrar por tipo de solução)
+        material_solution_rows = db.execute(
+            text("SELECT filename, solution FROM materials")
+        ).fetchall()
+        filename_to_solution = {
+            (r.filename or "").strip(): (r.solution or "").strip() for r in material_solution_rows
+        }
+
+        # Carrega avaliações para calcular quebra por solução
+        evaluation_rows = db.execute(
+            text(
+                """
+                SELECT seller_name, final_score, full_result
+                FROM pitch_evaluations
+                WHERE final_score IS NOT NULL
+                """
+            )
+        ).fetchall()
+
+        seller_solution_sum: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        seller_solution_count: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        overall_solution_sum: dict[str, float] = defaultdict(float)
+        overall_solution_count: dict[str, int] = defaultdict(int)
+
+        for r in evaluation_rows:
+            seller = (r.seller_name or "").strip() or "(sem nome)"
+            score = float(r.final_score or 0)
+
+            materials: list[str] = []
+            try:
+                payload = json.loads(r.full_result or "{}") if r.full_result else {}
+                materials = payload.get("materials") or []
+                if not materials:
+                    materials_context = payload.get("materials_context") or []
+                    materials = [m.get("filename") for m in materials_context if isinstance(m, dict) and m.get("filename")]
+            except Exception:
+                materials = []
+
+            # Para evitar duplicar contagem, consideramos soluções únicas por avaliação
+            solutions = set()
+            for filename in materials or []:
+                safe_filename = (filename or "").strip()
+                solution = filename_to_solution.get(safe_filename, "")
+                solution = solution.strip() or "Sem solução"
+                solutions.add(solution)
+
+            if not solutions:
+                solutions = {"Sem solução"}
+
+            for solution in solutions:
+                seller_solution_sum[seller][solution] += score
+                seller_solution_count[seller][solution] += 1
+
+                overall_solution_sum[solution] += score
+                overall_solution_count[solution] += 1
+
+        # Normaliza ranking e garante ordenação por média (desc)
+        ranking = []
+        for row in ranking_rows:
+            avg_value = float(row.avg_score) if row.avg_score is not None else 0.0
+            ranking.append(
+                {
+                    "seller_name": row.seller_name,
+                    "total_evaluations": int(row.total_evaluations or 0),
+                    "avg_score": round(avg_value, 1),
+                    "best_score": int(row.best_score or 0),
+                    "last_evaluation": row.last_evaluation,
+                }
+            )
+        ranking.sort(key=lambda x: (x["avg_score"], x["total_evaluations"]), reverse=True)
+
+        # Quebra por solução (geral)
+        solution_overall = []
+        for solution, count in overall_solution_count.items():
+            total = overall_solution_sum.get(solution, 0.0)
+            avg = (total / count) if count else 0.0
+            solution_overall.append(
+                {
+                    "solution": solution,
+                    "total_evaluations": int(count),
+                    "avg_score": round(avg, 1),
+                }
+            )
+        solution_overall.sort(key=lambda x: (x["avg_score"], x["total_evaluations"]), reverse=True)
+
+        # Quebra por solução por vendedor
+        solution_by_seller: dict[str, list[dict]] = {}
+        for seller, solutions in seller_solution_count.items():
+            items = []
+            for solution, count in solutions.items():
+                total = seller_solution_sum[seller].get(solution, 0.0)
+                avg = (total / count) if count else 0.0
+                items.append(
+                    {
+                        "solution": solution,
+                        "total_evaluations": int(count),
+                        "avg_score": round(avg, 1),
+                    }
+                )
+            items.sort(key=lambda x: (x["avg_score"], x["total_evaluations"]), reverse=True)
+            solution_by_seller[seller] = items
+
     finally:
         db.close()
 
@@ -1337,7 +1448,9 @@ def manager_dashboard(request: Request):
         "admin_manager_dashboard.html",
         {
             "request": request,
-            "rows": rows,
+            "rows": ranking,
+            "solution_overall": solution_overall,
+            "solution_by_seller": solution_by_seller,
         },
     )
 @router.get("/perfis", response_class=HTMLResponse)
