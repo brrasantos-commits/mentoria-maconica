@@ -1,3 +1,4 @@
+import errno
 import re
 import shutil
 import uuid
@@ -64,18 +65,30 @@ def create_submission_paths(seller_name: str, video_filename: str) -> Submission
     )
 
 def save_upload(file, destination: Path) -> Path:
+    """Save uploaded file to destination.
+
+    Accepts both UploadFile and SimpleNamespace (for background tasks).
     """
-    Save uploaded file to destination.
-    Accepts both UploadFile and SimpleNamespace (for background tasks)
-    """
+
     destination.parent.mkdir(parents=True, exist_ok=True)
     
     # Handle both UploadFile and SimpleNamespace
-    file_obj = getattr(file, 'file', file)
-    
-    with destination.open('wb') as buffer:
-        shutil.copyfileobj(file_obj, buffer)
-    
+    file_obj = getattr(file, "file", file)
+
+    try:
+        with destination.open("wb") as buffer:
+            shutil.copyfileobj(file_obj, buffer)
+    except OSError as exc:
+        # Most common on Railway when the /app/data volume is full.
+        if getattr(exc, "errno", None) == errno.ENOSPC:
+            raise AppError(
+                "Sem espaço em disco no servidor para salvar o vídeo. "
+                "Um administrador precisa liberar espaço no volume (uploads/materiais processados) "
+                "ou aumentar o tamanho do volume no Railway.",
+                status_code=507,
+            ) from exc
+        raise
+
     return destination
 
 def read_txt(path: Path) -> str:

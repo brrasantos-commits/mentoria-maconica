@@ -576,12 +576,22 @@ def _run_analysis_job(
 
     except Exception as exc:
         logger.error(f"Unexpected error in job {job_id}: {exc}", exc_info=True)
+
+        # Provide a clearer error message for common operational issues.
+        if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:
+            message = (
+                "Sem espaço em disco no servidor para salvar/processar o vídeo. "
+                "Libere espaço no volume (/app/data) ou aumente o volume no Railway."
+            )
+        else:
+            message = "Erro interno ao analisar o pitch. Tente novamente."
+
         update_job(
             job_id,
             status="error",
             stage="error",
             progress=100,
-            message="Erro interno ao analisar o pitch. Tente novamente.",
+            message=message,
         )
 
 
