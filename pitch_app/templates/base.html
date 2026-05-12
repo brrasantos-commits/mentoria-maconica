@@ -561,14 +561,14 @@
 
             
 
-      {% set permissions = request.session.get("permissions", []) %}
+      {% set session_permissions = request.session.get("permissions", []) %}
 
       <nav class="site-nav">
         <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">
         Estudo
         </a>
 
-                {% if request.session.get("user_role") == "admin" or "chat_estudo" in permissions %}
+                {% if request.session.get("user_role") == "admin" or "chat_estudo" in session_permissions %}
         <a class="nav-link {% if request.url.path.startswith('/chat-estudo') %}active{% endif %}" href="/chat-estudo">
         Chat Estudo
         </a>
@@ -591,9 +591,9 @@
         
 
         {% if request.session.get("user_role") == "admin"
-          or "admin_materiais" in permissions
-          or "admin_filtros" in permissions
-          or "painel_gestor" in permissions %}
+          or "admin_materiais" in session_permissions
+          or "admin_filtros" in session_permissions
+          or "painel_gestor" in session_permissions %}
 
         <div class="admin-menu">
           <button type="button" class="nav-link admin-menu-btn" onclick="toggleAdminMenu(event)">
@@ -603,7 +603,7 @@
           <div class="admin-menu-dropdown">
 
             {% if request.session.get("user_role") == "admin"
-              or "admin_materiais" in permissions %}
+              or "admin_materiais" in session_permissions %}
             <a class="{% if request.url.path.startswith('/admin/materials') %}active{% endif %}"
               href="/admin/materials">📚 Materiais</a>
             {% endif %}
@@ -617,7 +617,7 @@
             {% endif %}
 
             {% if request.session.get("user_role") == "admin"
-              or "admin_filtros" in permissions %}
+              or "admin_filtros" in session_permissions %}
             <a class="{% if request.url.path.startswith('/admin/filtros') %}active{% endif %}"
               href="/admin/filtros">🧩 Filtros</a>
             {% endif %}
@@ -628,7 +628,7 @@
             {% endif %}
 
             {% if request.session.get("user_role") == "admin"
-              or "painel_gestor" in permissions %}
+              or "painel_gestor" in session_permissions %}
             <a class="{% if request.url.path.startswith('/admin/gestor') %}active{% endif %}"
               href="/admin/gestor">📈 Painel do Gestor</a>
             {% endif %}
