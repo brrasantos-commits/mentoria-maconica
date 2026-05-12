@@ -12,7 +12,7 @@
     <div class="hero-pill">Processamento com IA</div>
   </div>
 
-  <div class="panel-card" style="display:grid; gap:22px;">
+  <div id="progressCard" class="panel-card" style="display:grid; gap:22px;">
     <div>
       <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
         <strong id="progressStage">Preparando análise</strong>
@@ -29,9 +29,15 @@
       <span id="progressMessage">Iniciando...</span>
     </div>
 
-    <div class="hint">
+        <div class="hint">
       Mantenha esta tela aberta. Quando a análise terminar, o resultado será aberto automaticamente.
     </div>
+
+    <div id="errorActions" style="display:none; gap:10px; flex-wrap:wrap;">
+      <a class="secondary-btn" href="/pitch">Voltar para o Pitch</a>
+      <button type="button" class="primary-btn" onclick="window.location.reload()">Tentar novamente</button>
+    </div>
+
   </div>
 </section>
 {% endblock %}
@@ -39,6 +45,38 @@
 {% block scripts %}
 <script>
   const jobId = "{{ job_id }}";
+
+  const stageLabels = {
+    upload: "Salvando vídeo",
+    audio: "Convertendo para áudio",
+    transcription: "Transcrevendo",
+    materials: "Carregando materiais",
+    evaluation: "Avaliando com IA",
+    done: "Concluído",
+    error: "Erro",
+    processing: "Processando"
+  };
+
+  function setErrorUI(message) {
+    const card = document.getElementById("progressCard");
+    const bar = document.getElementById("progressBar");
+
+    document.getElementById("progressStage").textContent = "Erro";
+    document.getElementById("progressValue").textContent = "";
+
+    if (bar) bar.style.background = "#dc2626";
+
+    if (card) {
+      card.style.borderColor = "#fecaca";
+      card.style.background = "#fef2f2";
+    }
+
+    document.getElementById("progressMessage").textContent = message || "Ocorreu um erro ao processar a análise.";
+
+    // Mostra ação para voltar
+    const hint = document.getElementById("errorActions");
+    if (hint) hint.style.display = "flex";
+  }
 
   async function refreshProgress() {
     try {
@@ -61,19 +99,20 @@
 
       document.getElementById("progressValue").textContent = `${progress}%`;
       document.getElementById("progressBar").style.width = `${progress}%`;
-      document.getElementById("progressStage").textContent = stage;
+            document.getElementById("progressStage").textContent = stageLabels[stage] || stage;
       document.getElementById("progressMessage").textContent = message;
+
 
       if (job.status === "done") {
         window.location.href = `/analyze/result/${jobId}`;
         return;
       }
 
-      if (job.status === "error") {
-        document.getElementById("progressMessage").textContent =
-          message || "Erro ao processar análise.";
+            if (job.status === "error") {
+        setErrorUI(message);
         return;
       }
+
 
       setTimeout(refreshProgress, 1200);
 

@@ -1,8 +1,10 @@
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from openai import OpenAI
+
 
 from pitch_app.services.config import (
     MATERIAL_AUDIO_CACHE_DIR,
@@ -172,10 +174,29 @@ def _load_video_material_text(video_path: Path) -> str:
     summary_path = sidecars["summary_path"]
 
     if not transcript_path.exists():
+
+        # Fallback: tenta processar automaticamente se a API estiver configurada.
+        # Isso evita que a análise do pitch falhe quando um vídeo foi importado em lote
+        # mas ainda não teve transcrição/resumo gerados.
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if api_key:
+            try:
+                client = OpenAI(api_key=api_key)
+                process_material_on_upload(client, video_path)
+            except Exception:
+                # Se falhar, cairá no erro abaixo.
+                pass
+
+    if not transcript_path.exists():
+
         raise AppError(
-            f"Vídeo sem transcrição pré-processada: {video_path.name}",
+            "Um dos materiais selecionados é um VÍDEO que ainda não foi processado (sem transcrição). "
+            f"Arquivo: {video_path.name}. "
+            "Peça para um administrador ir em Admin → Materiais e clicar em 'Reprocessar material', "
+            "ou reimportar o material em lote com o processamento habilitado.",
             status_code=400,
         )
+
 
     transcript_text = transcript_path.read_text(encoding="utf-8").strip()
 

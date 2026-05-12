@@ -9,7 +9,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from pitch_app.services.material_service import invalidate_filter_cache
 
-from pitch_app.services.config import MATERIALS_DIR
+from pitch_app.services.config import MATERIALS_DIR, VIDEO_MATERIAL_EXTENSIONS
+from pitch_app.services.material_processing_service import process_material_on_upload
+
 
 
 def scan_materials_directory() -> List[Dict]:
@@ -205,18 +207,22 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
 
     If `sort_order` is not provided, it assigns the next available sequence
     starting at max(sort_order)+1, skipping any occupied values.
+
+    Additionally, for video materials, it can pre-process (transcribe + summarize)
+    so they can be used during pitch analysis.
     """
 
     imported = 0
     skipped = 0
     errors: list[str] = []
+    warnings: list[str] = []
 
     existing = get_existing_filenames(db)
 
-        # Existing orders (for uniqueness validation)
+    # Existing orders (for uniqueness validation)
     existing_orders_rows = db.execute(text("SELECT sort_order FROM materials")).fetchall()
-
     used_orders: set[int] = set()
+
     for r in existing_orders_rows:
         if r is None:
             continue
@@ -236,7 +242,6 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
         except Exception:
             continue
 
-
     # Cursor for auto sort_order
     next_order_row = db.execute(
         text("SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM materials")
@@ -250,6 +255,22 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
         value = next_order_cursor
         next_order_cursor += 1
         return value
+
+    # Optional: process video materials during bulk import so they can be used in pitch analysis.
+    process_videos = (
+        os.getenv("PROCESS_VIDEOS_ON_BULK_IMPORT", "1").strip().lower()
+        not in {"0", "false", "no"}
+    )
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    client = None
+
+    if process_videos and api_key:
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=api_key)
+        except Exception:
+            client = None
 
     for material in materials:
         filename = material.get("filename")
@@ -273,11 +294,15 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
             try:
                 sort_order = int(sort_order_value)
             except Exception:
-                errors.append(f"Ordem de exibição inválida para {filename}. Use um número inteiro.")
+                errors.append(
+                    f"Ordem de exibição inválida para {filename}. Use um número inteiro."
+                )
                 continue
 
             if sort_order < 0:
-                errors.append(f"Ordem de exibição inválida para {filename}. Use um número >= 0.")
+                errors.append(
+                    f"Ordem de exibição inválida para {filename}. Use um número >= 0."
+                )
                 continue
 
             if sort_order in used_orders:
@@ -314,6 +339,39 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
             )
             imported += 1
 
+            # If this is a video material, try to pre-process (transcribe + summarize)
+            file_path = MATERIALS_DIR / filename
+            if file_path.suffix.lower() in VIDEO_MATERIAL_EXTENSIONS:
+                if process_videos and client and file_path.exists():
+                    try:
+                        processing_result = process_material_on_upload(client, file_path)
+                        if processing_result.get("has_transcript") or processing_result.get("has_ai_summary"):
+                            db.execute(
+                                text(
+                                    """
+                                    UPDATE materials
+                                    SET transcript_path = :transcript_path,
+                                        has_transcript = :has_transcript,
+                                        summary_path = :summary_path,
+                                        has_ai_summary = :has_ai_summary
+                                    WHERE filename = :filename
+                                    """
+                                ),
+                                {
+                                    "filename": filename,
+                                    "transcript_path": processing_result.get("transcript_path"),
+                                    "has_transcript": 1 if processing_result.get("has_transcript") else 0,
+                                    "summary_path": processing_result.get("summary_path"),
+                                    "has_ai_summary": 1 if processing_result.get("has_ai_summary") else 0,
+                                },
+                            )
+                    except Exception as exc:
+                        warnings.append(f"Processamento de vídeo falhou para {filename}: {exc}")
+                elif process_videos and not api_key:
+                    warnings.append(
+                        f"{filename}: vídeo importado, mas OPENAI_API_KEY não configurada para transcrever automaticamente."
+                    )
+
         except Exception as e:
             errors.append(f"Error importing {filename}: {str(e)}")
 
@@ -324,8 +382,11 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
         "imported": imported,
         "skipped": skipped,
         "errors": errors,
+        "warnings": warnings,
         "total": len(materials),
     }
+
+
 
 
 

@@ -7,14 +7,16 @@ from collections import defaultdict
 
 from pitch_app.services.auth_service import verify_password
 from pitch_app.services.auth_service import hash_password
-from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, BackgroundTasks
+
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import text
 from openai import OpenAI
 
 from pitch_app.db import SessionLocal
 from pitch_app.services.material_processing_service import process_material_on_upload
-from pitch_app.services.config import MATERIALS_DIR
+from pitch_app.services.config import MATERIALS_DIR, VIDEO_MATERIAL_EXTENSIONS
+
 
 from fastapi import Request, Form, Depends
 from fastapi.responses import RedirectResponse
@@ -1064,9 +1066,28 @@ async def multi_upload_page(request: Request):
         },
     )
 
+def _background_process_video_material(file_path: Path) -> None:
+    """Best-effort processing for video study materials.
+
+    This generates transcript/summary sidecar files so videos can be used in pitch analysis.
+    Runs in a background task to avoid blocking the bulk upload request.
+    """
+
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return
+
+    try:
+        client = OpenAI(api_key=api_key)
+        process_material_on_upload(client, file_path)
+    except Exception as exc:
+        print(f"⚠️ erro no processamento em background do material {file_path.name}: {exc}")
+
+
 @router.post("/materials/upload-bulk")
 async def upload_bulk_materials(
     request: Request,
+    background_tasks: BackgroundTasks,
     files: list[UploadFile] | None = File(default=None),
 ):
     _admin_only(request)
@@ -1105,6 +1126,14 @@ async def upload_bulk_materials(
         dest = MATERIALS_DIR / Path(filename).name
         with dest.open("wb") as f:
             f.write(content)
+
+
+
+        # Processamento de vídeo (transcrição + resumo) após carga em lote
+        process_videos = os.getenv("PROCESS_VIDEOS_ON_BULK_UPLOAD", "1").strip().lower() not in {"0", "false", "no"}
+        if process_videos and dest.suffix.lower() in VIDEO_MATERIAL_EXTENSIONS:
+            background_tasks.add_task(_background_process_video_material, dest)
+
 
     return RedirectResponse(url="/admin/materials/bulk-import", status_code=303)
 
@@ -1164,11 +1193,36 @@ async def upload_single_file(
         )
         db.commit()
 
-        # Process material (transcription/summary if applicable)
+                # Process material (transcription/summary) if it is a video.
         material_id = db.execute(text("SELECT last_insert_rowid()")).scalar()
-        if material_id:
+
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if material_id and api_key and file_path.suffix.lower() in VIDEO_MATERIAL_EXTENSIONS:
             try:
-                process_material_on_upload(material_id, file.filename, file_ext)
+                client = OpenAI(api_key=api_key)
+                processing_result = process_material_on_upload(client, file_path)
+
+                db.execute(
+                    text(
+                        """
+                        UPDATE materials
+                        SET transcript_path = :transcript_path,
+                            has_transcript = :has_transcript,
+                            summary_path = :summary_path,
+                            has_ai_summary = :has_ai_summary
+                        WHERE id = :id
+                        """
+                    ),
+                    {
+                        "id": material_id,
+                        "transcript_path": processing_result.get("transcript_path"),
+                        "has_transcript": 1 if processing_result.get("has_transcript") else 0,
+                        "summary_path": processing_result.get("summary_path"),
+                        "has_ai_summary": 1 if processing_result.get("has_ai_summary") else 0,
+                    },
+                )
+                db.commit()
+
             except Exception as e:
                 # Don't fail the upload if processing fails
                 print(f"Warning: Failed to process material {material_id}: {e}")
@@ -1177,6 +1231,7 @@ async def upload_single_file(
             "success": True,
             "message": f"Arquivo {file.filename} enviado com sucesso",
         }
+
 
     except Exception as e:
         db.rollback()
