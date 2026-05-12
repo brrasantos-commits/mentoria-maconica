@@ -32,10 +32,16 @@
 
         return true;
       ">
-    <div class="form-row">
+        <div class="form-row">
       <div>
-        <label for="seller_name">Nome do vendedor</label>
-        <input type="text" id="seller_name" name="seller_name" required placeholder="Ex.: João Silva">
+        <label for="seller_name_display">Vendedor (usuário logado)</label>
+        <input
+          type="text"
+          id="seller_name_display"
+          value="{{ request.session.get('user_name', '') }}"
+          readonly
+        >
+        <div class="hint" style="margin-top:6px;">O pitch será salvo automaticamente no seu usuário.</div>
       </div>
 
       <div>
@@ -43,6 +49,7 @@
         <input type="file" id="video" name="video" accept="video/*" required>
       </div>
     </div>
+
 
     <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
 

@@ -528,6 +528,7 @@ def save_pitch_evaluation(user_id, seller_name, video_name, job_id, result):
 
 def _run_analysis_job(
     job_id: str,
+    user_id: int | None,
     seller_name: str,
     video_filename: str,
     video_bytes: bytes,
@@ -547,8 +548,9 @@ def _run_analysis_job(
             materials=materials,
         )
 
+                
         save_pitch_evaluation(
-            user_id=None,
+            user_id=user_id,
             seller_name=seller_name,
             video_name=video_filename,
             job_id=job_id,
@@ -556,6 +558,7 @@ def _run_analysis_job(
         )
 
         update_job(
+
             job_id,
             status="done",
             stage="done",
@@ -1000,14 +1003,25 @@ async def seller_history(request: Request, db: Session = Depends(get_db)):
     if not user_has_permission(request, "historico"):
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
+        
+    user_id = request.session.get("user_id")
     seller_name = request.session.get("user_name")
 
-    rows = db.execute(text("""
-        SELECT id, seller_name, video_name, job_id, final_score, status, created_at
-        FROM pitch_evaluations
-        WHERE seller_name = :seller_name
-        ORDER BY created_at DESC
-    """), {"seller_name": seller_name}).fetchall()
+
+    # Prefer user_id for correct ownership. Fallback to legacy rows where user_id is NULL.
+    rows = db.execute(
+        text(
+            """
+            SELECT id, seller_name, video_name, job_id, final_score, status, created_at
+            FROM pitch_evaluations
+            WHERE (user_id = :user_id)
+               OR (user_id IS NULL AND seller_name = :seller_name)
+            ORDER BY created_at DESC
+            """
+        ),
+        {"user_id": user_id, "seller_name": seller_name},
+    ).fetchall()
+
 
     return templates.TemplateResponse(
         request,
@@ -1158,8 +1172,8 @@ async def job_status(request: Request, job_id: str):
 @app.post("/analyze", response_class=HTMLResponse)
 async def analyze(
     request: Request,
+
     background_tasks: BackgroundTasks,
-    seller_name: str = Form(...),
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
 ):
@@ -1169,13 +1183,21 @@ async def analyze(
 
     _validate_video_upload(video, request)
 
+    user_id = request.session.get("user_id")
+    seller_name = (request.session.get("user_name") or "").strip()
+
+    if not seller_name:
+        seller_name = "Vendedor"
+
     video_bytes = await video.read()
     video_filename = video.filename or "video.mp4"
 
     job_id = create_job(
-        seller_name=(seller_name or "").strip(),
+        seller_name=seller_name,
         video_name=video_filename,
+        user_id=user_id,
     )
+
 
     update_job(
         job_id,
@@ -1185,9 +1207,11 @@ async def analyze(
         status="running",
     )
 
+        
     background_tasks.add_task(
         _run_analysis_job,
         job_id,
+        user_id,
         seller_name,
         video_filename,
         video_bytes,
@@ -1195,6 +1219,7 @@ async def analyze(
     )
 
     return RedirectResponse(url=f"/analyze/progress/{job_id}", status_code=303)
+
 
 
 @app.get("/analyze/progress/{job_id}", response_class=HTMLResponse)
