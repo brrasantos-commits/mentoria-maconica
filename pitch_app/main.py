@@ -309,8 +309,9 @@ def seed_initial_data():
             text("SELECT id FROM access_profiles WHERE name = 'Gestor'")
         ).scalar()
 
-        # Permissions for seller
-        seller_features = ["estudo", "roleplay", "pitch", "historico"]
+                # Permissions for seller
+        seller_features = ["estudo", "chat_estudo", "roleplay", "pitch", "historico"]
+
         for feature in seller_features:
             db.execute(
                 text(
@@ -681,8 +682,7 @@ async def study_chat_page(request: Request):
     if not is_user_logged(request):
         return _login_redirect()
 
-    # Reaproveita a permissão de estudo (para não exigir migração de permissões)
-    if not user_has_permission(request, "estudo"):
+    if not user_has_permission(request, "chat_estudo"):
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     return templates.TemplateResponse(
@@ -693,6 +693,7 @@ async def study_chat_page(request: Request):
             "selected_materials": get_selected_materials(request),
         },
     )
+
 
 def user_has_permission(request: Request, feature: str):
 

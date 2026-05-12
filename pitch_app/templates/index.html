@@ -38,7 +38,10 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button type="submit" class="primary-btn">Aplicar filtros</button>
       <a class="secondary-btn" href="/estudo">Limpar</a>
+            {% if request.session.get("user_role") == "admin" or "chat_estudo" in request.session.get("permissions", []) %}
       <a class="secondary-btn" href="/chat-estudo">Chat com materiais</a>
+      {% endif %}
+
       <a class="secondary-btn" href="/roleplay">Ir para Roleplay</a>
     </div>
   </form>

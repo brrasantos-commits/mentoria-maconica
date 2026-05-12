@@ -557,14 +557,23 @@
         <p>Treinamento comercial, estudo de materiais, envio de pitch e gestão administrativa.</p>
       </div>
 
+      
+
+            
+
+      {% set permissions = request.session.get("permissions", []) %}
+
       <nav class="site-nav">
         <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">
         Estudo
         </a>
 
+                {% if request.session.get("user_role") == "admin" or "chat_estudo" in permissions %}
         <a class="nav-link {% if request.url.path.startswith('/chat-estudo') %}active{% endif %}" href="/chat-estudo">
         Chat Estudo
         </a>
+        {% endif %}
+
 
         <a class="nav-link {% if request.url.path.startswith('/roleplay') %}active{% endif %}" href="/roleplay">
         Roleplay
@@ -579,7 +588,7 @@
           Minha Evolução
         </a>
 
-        {% set permissions = request.session.get("permissions", []) %}
+        
 
         {% if request.session.get("user_role") == "admin"
           or "admin_materiais" in permissions

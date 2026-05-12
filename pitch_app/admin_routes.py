@@ -26,6 +26,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 FEATURES = [
     ("estudo", "Estudo"),
+    ("chat_estudo", "Chat Estudo"),
     ("roleplay", "Roleplay"),
     ("pitch", "Pitch"),
     ("historico", "Minha Evolução"),
@@ -35,6 +36,7 @@ FEATURES = [
     ("admin_filtros", "Admin — Filtros"),
     ("admin_dashboard", "Admin — Dashboard"),
 ]
+
 
 def ensure_filtros_table():
     db = SessionLocal()
