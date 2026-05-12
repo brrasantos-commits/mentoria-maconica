@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat de Estudo | Sales Pitch AI{% endblock %}
+
+{% block content %}
+<section class="page-card" style="max-width:900px; margin:auto;">
+  <div class="hero-block">
+    <div>
+      <h2>Chat com material de estudo selecionado</h2>
+      <p>Tire dúvidas sobre os materiais selecionados e transforme o conteúdo em argumentos práticos para seu pitch.</p>
+    </div>
+    <div class="hero-pill">Assistente de estudo</div>
+  </div>
+
+  <div id="warning" class="card-note" style="display:none; background:#fff7ed; border-color:#fed7aa; color:#9a3412; margin-bottom:12px;">
+    <strong>Atenção:</strong> selecione pelo menos 1 material na etapa de <a href="/estudo">Estudo</a> antes de usar o chat.
+  </div>
+
+  <div class="panel-card" style="display:grid; gap:14px;">
+    <div class="card-note">
+      <strong>Materiais selecionados:</strong>
+      <div id="selectedMaterials" class="selection-summary" style="margin-top:10px;"></div>
+    </div>
+
+    <div
+      id="chat"
+      style="
+        height:360px;
+        overflow-y:auto;
+        overflow-x:hidden;
+        border:1px solid #e5e7eb;
+        padding:16px;
+        border-radius:14px;
+        background:#fafafa;
+        scroll-behavior:smooth;
+        line-height:1.55;
+        font-size:14px;
+      "
+    ></div>
+
+    <form id="chatForm" style="display:grid; gap:10px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <input
+          type="text"
+          id="message"
+          placeholder="Digite sua dúvida sobre os materiais..."
+          required
+          disabled
+          style="flex:1;"
+        >
+
+        <button type="submit" class="primary-btn" id="sendBtn" disabled>Enviar</button>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+        <button type="button" class="secondary-btn" id="clearBtn">Limpar conversa</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const warning = document.getElementById("warning");
+  const input = document.getElementById("message");
+  const sendBtn = document.getElementById("sendBtn");
+  const chat = document.getElementById("chat");
+  const selectedBox = document.getElementById("selectedMaterials");
+
+  let history = [];
+
+  function addMessage(role, text) {
+    const div = document.createElement("div");
+    div.style.margin = "10px 0";
+
+    const who = role === "user" ? "Você" : "Assistente";
+    div.innerHTML = `<b>${who}:</b> ${String(text || "").replace(/\n/g, "<br>")}`;
+
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function renderSelectedMaterials() {
+    const items = (typeof getSelectedMaterials === "function") ? getSelectedMaterials() : [];
+    selectedBox.innerHTML = "";
+
+    if (!items || !items.length) {
+      selectedBox.innerHTML = '<span class="hint">Nenhum material selecionado.</span>';
+      return;
+    }
+
+    items.forEach(filename => {
+      const chip = document.createElement("span");
+      chip.className = "selection-chip";
+      chip.innerHTML = `<span>${filename}</span>`;
+      selectedBox.appendChild(chip);
+    });
+  }
+
+  function updateChatLock() {
+    const items = (typeof getSelectedMaterials === "function") ? getSelectedMaterials() : [];
+    const locked = !items || !items.length;
+
+    warning.style.display = locked ? "block" : "none";
+    input.disabled = locked;
+    sendBtn.disabled = locked;
+  }
+
+  // initial
+  renderSelectedMaterials();
+  updateChatLock();
+
+  addMessage(
+    "assistant",
+    "Olá! Eu posso te ajudar a estudar os materiais selecionados. Pergunte qualquer coisa sobre conceitos, benefícios, diferenciais, casos de uso, e como aplicar no pitch. Sempre que possível, vou citar a fonte (nome do arquivo)."
+  );
+
+  window.addEventListener("materials-updated", () => {
+    renderSelectedMaterials();
+    updateChatLock();
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    history = [];
+    chat.innerHTML = "";
+    addMessage(
+      "assistant",
+      "Conversa limpa. Pode enviar uma nova dúvida sobre os materiais selecionados."
+    );
+  });
+
+  document.getElementById("chatForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const message = input.value;
+    if (!message) return;
+
+    addMessage("user", message);
+    input.value = "";
+
+    const formData = new FormData();
+    formData.append("message", message);
+    formData.append("history", JSON.stringify(history));
+
+    try {
+      sendBtn.disabled = true;
+      input.disabled = true;
+
+      const res = await fetch("/api/study-chat", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin"
+      });
+
+      const data = await res.json();
+
+      history = data.history || history;
+
+      const aiText = data.response || data.answer || data.message || data.detail || "Não consegui responder agora.";
+      addMessage("assistant", aiText);
+
+    } catch (err) {
+      addMessage("assistant", "Falha ao chamar o chat agora. Tente novamente.");
+
+    } finally {
+      sendBtn.disabled = false;
+      input.disabled = false;
+    }
+  });
+</script>
+{% endblock %}

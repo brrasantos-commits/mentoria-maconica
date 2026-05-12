@@ -10,6 +10,8 @@ from contextlib import asynccontextmanager
 from fastapi import Form
 from fastapi.responses import HTMLResponse
 from pitch_app.services.roleplay_service import generate_ai_response, evaluate_roleplay
+from pitch_app.services.study_chat_service import generate_study_chat_response
+
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
@@ -672,7 +674,28 @@ async def roleplay_page(request: Request):
         },
     )
 
+
+@app.get("/chat-estudo", response_class=HTMLResponse)
+async def study_chat_page(request: Request):
+
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    # Reaproveita a permissão de estudo (para não exigir migração de permissões)
+    if not user_has_permission(request, "estudo"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
+    return templates.TemplateResponse(
+        request,
+        "study_chat.html",
+        {
+            "request": request,
+            "selected_materials": get_selected_materials(request),
+        },
+    )
+
 def user_has_permission(request: Request, feature: str):
+
     if request.session.get("user_role") == "admin":
         return True
 
@@ -739,9 +762,57 @@ async def roleplay_api(
         "response": ai_response,
         "history": conversation
     }
+
+
+
+@app.post("/api/study-chat")
+async def study_chat_api(
+    request: Request,
+    message: str = Form(...),
+    history: str = Form(""),
+):
+    import json
+    from pitch_app.services.material_processing_service import get_material_text
+    from pitch_app.services.config import MATERIALS_DIR
+
+    if not is_user_logged(request):
+        raise HTTPException(status_code=401, detail="Usuário não autenticado")
+
+    selected_materials = get_selected_materials(request)
+    if not selected_materials:
+        raise HTTPException(
+            status_code=400,
+            detail="Selecione pelo menos um material na etapa de Estudo para usar o chat.",
+        )
+
+    material_texts: dict[str, str] = {}
+    for filename in selected_materials:
+        material_path = MATERIALS_DIR / filename
+        if material_path.exists():
+            material_texts[filename] = get_material_text(material_path)
+
+    conversation: list[dict] = []
+    if history:
+        conversation = json.loads(history)
+
+    conversation.append({"role": "user", "content": message})
+
+    ai_response = generate_study_chat_response(
+        conversation=conversation,
+        material_texts=material_texts,
+    )
+
+    conversation.append({"role": "assistant", "content": ai_response})
+
+    return {
+        "response": ai_response,
+        "history": conversation,
+        "materials": selected_materials,
+    }
     
 @app.post("/api/roleplay/evaluate")
 async def evaluate_roleplay_api(history: str = Form(...)):
+
     import json
 
     conversation = json.loads(history)
