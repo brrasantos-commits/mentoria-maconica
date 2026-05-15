@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Usuários | Mentoria Maçônica AI{% endblock %}
+{% block title %}Usuários | Sales Pitch AI{% endblock %}
 
 {% block content %}
 <section class="page-card">
   <div class="hero-block">
     <div>
       <h2>Gestão de usuários</h2>
-      <p>Cadastre mentorados, mentores, administradores e controle quem pode acessar o sistema.</p>
+      <p>Cadastre vendedores, administradores e controle quem pode acessar o sistema.</p>
     </div>
     <a class="primary-btn" href="/admin/users/new">Novo usuário</a>
   </div>
@@ -36,7 +36,7 @@
             {% if user.role == 'admin' %}
               <span class="material-badge">Admin</span>
             {% else %}
-              <span class="material-badge">Mentorado</span>
+              <span class="material-badge">Vendedor</span>
             {% endif %}
           </td>
           <td style="padding:12px;">

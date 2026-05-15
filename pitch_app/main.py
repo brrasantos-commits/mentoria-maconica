@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application...")
 
 app = FastAPI(
-    title="Mentoria Maçônica AI",
+    title="Sales Pitch AI V4",
     lifespan=lifespan
 )
 
@@ -141,17 +141,17 @@ def ensure_filtros_table():
         count = db.execute(text("SELECT COUNT(*) FROM filtros_config")).scalar()
         if count == 0:
             initial_filters = [
-                ("industria", "Aprendiz"),
-                ("industria", "Companheiro"),
-                ("industria", "Mestre"),
-                ("industria", "História"),
-                ("industria", "Simbologia"),
-                ("industria", "Ética"),
-                ("solucao", "Prancha"),
-                ("solucao", "Instrução"),
-                ("solucao", "Ritualística"),
-                ("solucao", "Biblioteca"),
-                ("solucao", "Reflexão"),
+                ("industria", "Varejo"),
+                ("industria", "Saúde"),
+                ("industria", "Finanças"),
+                ("industria", "Tecnologia"),
+                ("industria", "Educação"),
+                ("industria", "Indústria"),
+                ("solucao", "Software"),
+                ("solucao", "Serviços"),
+                ("solucao", "Consultoria"),
+                ("solucao", "Hardware"),
+                ("solucao", "Plataforma"),
             ]
             for tipo, valor in initial_filters:
                 db.execute(text("""
@@ -333,7 +333,7 @@ def seed_initial_data():
                 VALUES (:name, :description, 1)
                 """
             ),
-            {"name": "Mentorado", "description": "Perfil padrão de mentorado"},
+            {"name": "Vendedor", "description": "Perfil padrão de vendedor"},
         )
         db.execute(
             text(
@@ -346,7 +346,7 @@ def seed_initial_data():
         )
 
         seller_profile_id = db.execute(
-            text("SELECT id FROM access_profiles WHERE name = 'Mentorado'")
+            text("SELECT id FROM access_profiles WHERE name = 'Vendedor'")
         ).scalar()
         manager_profile_id = db.execute(
             text("SELECT id FROM access_profiles WHERE name = 'Gestor'")
@@ -539,7 +539,7 @@ def seed_initial_data():
 def _validate_video_upload(video: UploadFile, request: Request):
     """Validate video upload with optimized size check"""
     if not video or not video.filename:
-        raise HTTPException(status_code=400, detail="Vídeo da prancha é obrigatório.")
+        raise HTTPException(status_code=400, detail="Vídeo do pitch é obrigatório.")
 
     # Check content-length header first (more efficient)
     content_length = request.headers.get("content-length")
@@ -608,7 +608,7 @@ def _run_analysis_job(
     video_bytes: bytes,
     materials: list[str],
 ):
-    """Background task to run presentation analysis"""
+    """Background task to run pitch analysis"""
     try:
         fake_upload = SimpleNamespace(
             filename=video_filename,
@@ -661,7 +661,7 @@ def _run_analysis_job(
                 "Libere espaço no volume (/app/data) ou aumente o volume no Railway."
             )
         else:
-            message = "Erro interno ao analisar a prancha. Tente novamente."
+            message = "Erro interno ao analisar o pitch. Tente novamente."
 
         update_job(
             job_id,
@@ -1125,7 +1125,7 @@ async def study_material(
 
 @app.post("/estudo/concluir")
 async def study_complete(request: Request):
-    """Complete study phase and redirect to presentation submission"""
+    """Complete study phase and redirect to pitch"""
     if not is_user_logged(request):
         return _login_redirect()
 
@@ -1342,7 +1342,7 @@ async def analyze(
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
 ):
-    """Submit presentation for analysis"""
+    """Submit pitch for analysis"""
     if not is_user_logged(request):
         return _login_redirect()
 
@@ -1352,7 +1352,7 @@ async def analyze(
     seller_name = (request.session.get("user_name") or "").strip()
 
     if not seller_name:
-        seller_name = "Mentorado"
+        seller_name = "Vendedor"
 
     video_bytes = await video.read()
     video_filename = video.filename or "video.mp4"
@@ -1473,7 +1473,7 @@ async def download_result_pdf(request: Request, job_id: str):
         )
 
         # Return PDF as download
-        filename = f"resultado_prancha_{result.get('seller_name', 'mentorado')}_{job_id[:8]}.pdf"
+        filename = f"resultado_pitch_{result.get('seller_name', 'vendedor')}_{job_id[:8]}.pdf"
         
         return Response(
             content=pdf_bytes,

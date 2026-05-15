@@ -65,17 +65,17 @@ def init_db():
                 WHERE username = 'admin'
             """), {"password": admin_password})
 
-        # Verificar se usuário mentorado já existe
+        # Verificar se vendedor já existe
         seller_exists = conn.execute(text("""
             SELECT id, password FROM users WHERE username = 'vendedor'
         """)).fetchone()
         
         if not seller_exists:
-            # Criar usuário mentorado com senha hasheada
+            # Criar vendedor com senha hasheada
             seller_password = hash_password('123456')
             conn.execute(text("""
                 INSERT INTO users (name, username, password, role, active)
-                VALUES ('Mentorado', 'vendedor', :password, 'seller', 1)
+                VALUES ('Vendedor', 'vendedor', :password, 'seller', 1)
             """), {"password": seller_password})
         elif not seller_exists.password.startswith('$2'):
             # Migrar senha em texto plano para hash

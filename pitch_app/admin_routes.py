@@ -27,8 +27,8 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 FEATURES = [
     ("estudo", "Estudo"),
     ("chat_estudo", "Chat Estudo"),
-    ("roleplay", "Simulação"),
-    ("pitch", "Prancha"),
+    ("roleplay", "Roleplay"),
+    ("pitch", "Pitch"),
     ("historico", "Minha Evolução"),
     ("painel_gestor", "Painel do Gestor"),
     ("admin_materiais", "Admin — Materiais"),

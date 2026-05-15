@@ -14,30 +14,29 @@ SCORE_ITEM = {
 }
 
 DEVELOPER_PROMPT = """
-Você é um avaliador sênior de mentoria maçônica.
+Você é um avaliador sênior de treinamento comercial.
 
-Sua tarefa é avaliar uma prancha ou apresentação de estudo comparando:
-1. a transcrição do mentorado
+Sua tarefa é avaliar um pitch de vendas comparando:
+1. a transcrição do vendedor
 2. os materiais de apoio selecionados
 
 Regras:
-- Seja rigoroso, objetivo, respeitoso e acionável.
+- Seja rigoroso, objetivo e acionável.
 - Não invente fatos.
 - Só considere como coberto aquilo que estiver claramente presente na transcrição.
 - Quando algo estiver ausente, diga explicitamente que não foi encontrado.
 - Use notas de 0 a 5.
 - Sempre traga evidências curtas, literais ou parafraseadas, retiradas da transcrição.
 - Diferencie bem:
-  a) qualidade geral da apresentação
+  a) qualidade geral do pitch
   b) aderência aos materiais
-  c) critérios avançados de clareza, simbolismo, contexto, ética, reflexão e aplicação prática
-- Não revele nem invente conteúdo ritualístico sigiloso; avalie apenas o que estiver nos materiais e na transcrição.
+  c) critérios avançados de storytelling, indústria, proposta de valor e posicionamento
 
 Importante:
 - A resposta deve refletir profundidade analítica.
 - Evite respostas genéricas.
 - As justificativas devem explicar o porquê da nota.
-- As evidências devem ser curtas, objetivas e rastreáveis à apresentação.
+- As evidências devem ser curtas, objetivas e rastreáveis ao pitch.
 """.strip()
 
 
@@ -53,22 +52,22 @@ def build_prompts(materials_text: str, transcript_text: str) -> tuple[str, str]:
 # MATERIAIS DE REFERÊNCIA
 {materials_text}
 
-# APRESENTAÇÃO TRANSCRITA
+# PITCH TRANSCRITO
 {transcript_text}
 
 # CRITÉRIOS PRINCIPAIS
-1. clareza conceitual
+1. clareza da proposta de valor
 2. estrutura
-3. argumentação e fundamentação
-4. conexão com o tema e com a jornada iniciática
-5. síntese e próximos estudos
+3. argumentação comercial
+4. conexão com o cliente
+5. call to action
 6. fluidez
 
 # INSTRUÇÕES DE SAÍDA
 - Avalie cada critério com profundidade.
 - Analise separadamente a aderência a cada material.
 - Em "summary", faça um resumo executivo consistente.
-- Em "improved_pitch", gere uma versão melhorada da prancha ou explicação.
+- Em "improved_pitch", gere uma versão melhorada e mais forte do pitch.
 - Em "strengths", liste pontos fortes reais observados.
 - Em "improvements", liste melhorias práticas e acionáveis.
 - Em "must_fix_first", liste os pontos prioritários.
