@@ -16,10 +16,9 @@ def convert_video_to_audio(video_path: Path, audio_path: Path) -> None:
 
 def transcribe_audio(client: OpenAI, audio_path: Path) -> str:
     transcription_prompt = (
-        'Espere termos de vendas, tecnologia, proposta de valor, pitch comercial, '
-        'battlecard, objeções, storytelling, missão crítica, ransomware, downtime, '
-        'backup, deduplicação, segurança, continuidade, dashboards, NOC, SOC, '
-        'case de cliente, produto, benefícios, diferenciais, call to action.'
+        'Espere termos de estudo maçônico, simbologia, rito, grau, prancha, '
+        'instrução, história, ética, reflexão, virtude, alegoria, tradição, '
+        'aplicação prática e desenvolvimento do mentorado.'
     )
     with audio_path.open('rb') as audio_file:
         transcript = client.audio.transcriptions.create(
