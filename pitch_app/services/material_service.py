@@ -56,14 +56,22 @@ def get_filter_options():
     return _get_filter_options_cached(_filter_cache_key)
 
 
-def list_materials(db: Session, industry: str = "all", solution: str = "all") -> list[dict]:
+def list_materials(
+    db: Session,
+    industry: str = "all",
+    solution: str = "all",
+    rito: str = "all",
+    tema: str = "all",
+    categoria: str = "all",
+    user_grade_level: int | None = None,
+) -> list[dict]:
     """
     List all active materials with optional filtering
     """
     try:
         rows = db.execute(text("""
             SELECT id, title, filename, file_type, industry, solution, 
-                   description, sort_order, active
+                   description, rito, grau_minimo, tema, categoria, sort_order, active
             FROM materials
             WHERE active = 1
             ORDER BY sort_order ASC, id ASC
@@ -80,15 +88,29 @@ def list_materials(db: Session, industry: str = "all", solution: str = "all") ->
                 "industry": r.industry,
                 "solution": r.solution,
                 "description": r.description,
+                "rito": r.rito,
+                "grau_minimo": int(getattr(r, "grau_minimo", 1) or 1),
+                "tema": r.tema,
+                "categoria": r.categoria,
                 "sort_order": r.sort_order,
                 "active": bool(r.active),
                 "path": f"/materials/{r.filename}",
             }
 
+            # Apply grade-based access control
+            if user_grade_level is not None and item["grau_minimo"] > user_grade_level:
+                continue
+
             # Apply filters
             if industry != "all" and item["industry"] != industry:
                 continue
             if solution != "all" and item["solution"] != solution:
+                continue
+            if rito != "all" and item["rito"] != rito:
+                continue
+            if tema != "all" and item["tema"] != tema:
+                continue
+            if categoria != "all" and item["categoria"] != categoria:
                 continue
 
             materials.append(item)
@@ -106,7 +128,7 @@ def get_material_by_id(db: Session, material_id: int) -> Optional[dict]:
     try:
         row = db.execute(text("""
             SELECT id, title, filename, file_type, industry, solution, 
-                   description, sort_order, active
+                   description, rito, grau_minimo, tema, categoria, sort_order, active
             FROM materials
             WHERE id = :id AND active = 1
         """), {"id": material_id}).fetchone()
@@ -123,6 +145,10 @@ def get_material_by_id(db: Session, material_id: int) -> Optional[dict]:
             "industry": row.industry,
             "solution": row.solution,
             "description": row.description,
+            "rito": row.rito,
+            "grau_minimo": int(getattr(row, "grau_minimo", 1) or 1),
+            "tema": row.tema,
+            "categoria": row.categoria,
             "sort_order": row.sort_order,
             "active": bool(row.active),
             "path": f"/materials/{row.filename}",
@@ -132,8 +158,47 @@ def get_material_by_id(db: Session, material_id: int) -> Optional[dict]:
         return None
 
 
+def get_material_by_filename(db: Session, filename: str) -> Optional[dict]:
+    """
+    Get a single material by filename
+    """
+    try:
+        row = db.execute(text("""
+            SELECT id, title, filename, file_type, industry, solution,
+                   description, rito, grau_minimo, tema, categoria, sort_order, active
+            FROM materials
+            WHERE filename = :filename AND active = 1
+        """), {"filename": filename}).fetchone()
+
+        if not row:
+            return None
+
+        return {
+            "id": row.id,
+            "slug": f"{row.id}",
+            "title": row.title,
+            "filename": row.filename,
+            "type": (row.file_type or Path(row.filename).suffix.lower().lstrip(".")),
+            "industry": row.industry,
+            "solution": row.solution,
+            "description": row.description,
+            "rito": row.rito,
+            "grau_minimo": int(getattr(row, "grau_minimo", 1) or 1),
+            "tema": row.tema,
+            "categoria": row.categoria,
+            "sort_order": row.sort_order,
+            "active": bool(row.active),
+            "path": f"/materials/{row.filename}",
+        }
+    except Exception as e:
+        logger.error(f"Error getting material by filename {filename}: {e}")
+        return None
+
+
 def create_material(db: Session, title: str, filename: str, file_type: str,
                    industry: str, solution: str, description: str = "",
+                   rito: str = "", grau_minimo: int = 1,
+                   tema: str = "", categoria: str = "",
                    sort_order: int = 0) -> Optional[int]:
     """
     Create a new material
@@ -142,8 +207,8 @@ def create_material(db: Session, title: str, filename: str, file_type: str,
     try:
         result = db.execute(text("""
             INSERT INTO materials 
-            (title, filename, file_type, industry, solution, description, sort_order, active)
-            VALUES (:title, :filename, :file_type, :industry, :solution, :description, :sort_order, 1)
+            (title, filename, file_type, industry, solution, description, rito, grau_minimo, tema, categoria, sort_order, active)
+            VALUES (:title, :filename, :file_type, :industry, :solution, :description, :rito, :grau_minimo, :tema, :categoria, :sort_order, 1)
         """), {
             "title": title,
             "filename": filename,
@@ -151,6 +216,10 @@ def create_material(db: Session, title: str, filename: str, file_type: str,
             "industry": industry,
             "solution": solution,
             "description": description,
+            "rito": rito,
+            "grau_minimo": grau_minimo,
+            "tema": tema,
+            "categoria": categoria,
             "sort_order": sort_order
         })
         db.commit()
@@ -174,7 +243,7 @@ def update_material(db: Session, material_id: int, **kwargs) -> bool:
         params = {"id": material_id}
         
         allowed_fields = ["title", "filename", "file_type", "industry", 
-                         "solution", "description", "sort_order", "active"]
+                         "solution", "description", "rito", "grau_minimo", "tema", "categoria", "sort_order", "active"]
         
         for field in allowed_fields:
             if field in kwargs:

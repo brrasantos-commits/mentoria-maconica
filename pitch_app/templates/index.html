@@ -18,7 +18,7 @@
         <label for="industry">Indústria</label>
         <select id="industry" name="industry">
           <option value="all">Todas</option>
-          {% for option in industry_options %}
+          {% for option in filters.industria %}
             <option value="{{ option }}" {% if current_industry == option %}selected{% endif %}>{{ option }}</option>
           {% endfor %}
         </select>
@@ -28,8 +28,38 @@
         <label for="solution">Solução</label>
         <select id="solution" name="solution">
           <option value="all">Todas</option>
-          {% for option in solution_options %}
+          {% for option in filters.solucao %}
             <option value="{{ option }}" {% if current_solution == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="rito">Rito</label>
+        <select id="rito" name="rito">
+          <option value="all">Todos</option>
+          {% for option in filters.rito %}
+            <option value="{{ option }}" {% if current_rito == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="tema">Tema</label>
+        <select id="tema" name="tema">
+          <option value="all">Todos</option>
+          {% for option in filters.tema %}
+            <option value="{{ option }}" {% if current_tema == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="categoria">Categoria</label>
+        <select id="categoria" name="categoria">
+          <option value="all">Todas</option>
+          {% for option in filters.categoria %}
+            <option value="{{ option }}" {% if current_categoria == option %}selected{% endif %}>{{ option }}</option>
           {% endfor %}
         </select>
       </div>

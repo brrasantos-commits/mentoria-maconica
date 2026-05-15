@@ -18,6 +18,8 @@
         <tr style="text-align:left; border-bottom:1px solid #e5e7eb;">
           <th style="padding:12px;">Nome</th>
           <th style="padding:12px;">Usuário</th>
+          <th style="padding:12px;">E-mail</th>
+          <th style="padding:12px;">Grau</th>
           <th style="padding:12px;">Perfil</th>
           <th style="padding:12px;">Status</th>
           <th style="padding:12px;">Ações</th>
@@ -28,6 +30,8 @@
         <tr style="border-bottom:1px solid #f1f5f9;">
           <td style="padding:12px;">{{ user.name }}</td>
           <td style="padding:12px;">{{ user.username }}</td>
+          <td style="padding:12px;">{{ user.email or '-' }}</td>
+          <td style="padding:12px;">{{ user.grade_name or 'Sem grau' }}</td>
           <td style="padding:12px;">
             {% if user.role == 'admin' %}
               <span class="material-badge">Admin</span>
@@ -35,8 +39,6 @@
               <span class="material-badge">Vendedor</span>
             {% endif %}
           </td>
-          <th style="padding:12px;">E-mail</th>
-          <td style="padding:12px;">{{ user.email or '-' }}</td>
           <td style="padding:12px;">
             {% if user.active %}
               <span class="material-badge" style="background:#ecfdf5; color:#047857; border-color:#bbf7d0;">Ativo</span>
@@ -64,7 +66,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="5" style="padding:20px; color:#6b7280;">Nenhum usuário cadastrado.</td>
+          <td colspan="7" style="padding:20px; color:#6b7280;">Nenhum usuário cadastrado.</td>
         </tr>
         {% endfor %}
       </tbody>

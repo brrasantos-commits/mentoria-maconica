@@ -59,6 +59,13 @@
           </option>
         {% endfor %}
       </select>
+      <label for="grade_id">Grau do usuário</label>
+      <select id="grade_id" name="grade_id">
+        <option value="">Sem grau</option>
+        {% for grade in grades %}
+          <option value="{{ grade.id }}" {% if user and user.grade_id == grade.id %}selected{% endif %}>{{ grade.name }}</option>
+        {% endfor %}
+      </select>
     </div>
 
     <label style="display:flex; gap:10px; align-items:center;">

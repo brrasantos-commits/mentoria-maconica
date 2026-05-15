@@ -183,10 +183,24 @@
           {% endif %}
         </div>
 
-        {% if material.description %}
+        {% if material.description or material.rito or material.tema or material.categoria %}
           <div class="card-note">
-            <strong>Descrição</strong>
-            <p style="margin:8px 0 0;">{{ material.description }}</p>
+            {% if material.description %}
+              <strong>Descrição</strong>
+              <p style="margin:8px 0 0;">{{ material.description }}</p>
+            {% endif %}
+            <div style="margin-top:10px; display:grid; gap:6px;">
+              {% if material.rito %}
+                <span class="meta-note"><strong>Rito:</strong> {{ material.rito }}</span>
+              {% endif %}
+              {% if material.tema %}
+                <span class="meta-note"><strong>Tema:</strong> {{ material.tema }}</span>
+              {% endif %}
+              {% if material.categoria %}
+                <span class="meta-note"><strong>Categoria:</strong> {{ material.categoria }}</span>
+              {% endif %}
+              <span class="meta-note"><strong>Grau mínimo:</strong> {{ material.grau_minimo }}</span>
+            </div>
           </div>
         {% endif %}
 

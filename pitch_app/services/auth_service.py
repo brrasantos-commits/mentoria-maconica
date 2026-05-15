@@ -34,9 +34,11 @@ def authenticate_user(db: Session, username_or_email: str, password: str) -> Opt
     try:
         # Try to find user by username or email
         user = db.execute(text("""
-            SELECT id, name, username, email, password, role, active
-            FROM users
-            WHERE (username = :identifier OR email = :identifier) AND active = 1
+            SELECT u.id, u.name, u.username, u.email, u.password, u.role, u.active,
+                   u.grade_id, g.name AS grade_name, g.level AS grade_level
+            FROM users u
+            LEFT JOIN grades g ON g.id = u.grade_id
+            WHERE (u.username = :identifier OR u.email = :identifier) AND u.active = 1
         """), {"identifier": username_or_email}).fetchone()
 
         if not user:
@@ -54,7 +56,10 @@ def authenticate_user(db: Session, username_or_email: str, password: str) -> Opt
             "username": user.username,
             "email": user.email,
             "role": user.role,
-            "active": bool(user.active)
+            "active": bool(user.active),
+            "grade_id": user.grade_id,
+            "grade_name": getattr(user, "grade_name", None),
+            "grade_level": getattr(user, "grade_level", None),
         }
     except Exception as e:
         logger.error(f"Error authenticating user {username_or_email}: {e}")
@@ -62,7 +67,7 @@ def authenticate_user(db: Session, username_or_email: str, password: str) -> Opt
 
 
 def create_user(db: Session, name: str, username: str, password: str, 
-                role: str = "seller", email: Optional[str] = None) -> int:
+                role: str = "seller", email: Optional[str] = None, grade_id: Optional[int] = None) -> int:
     """
     Create a new user with hashed password
     Returns the new user ID
@@ -70,14 +75,15 @@ def create_user(db: Session, name: str, username: str, password: str,
     hashed_password = hash_password(password)
     
     result = db.execute(text("""
-        INSERT INTO users (name, username, password, role, email, active)
-        VALUES (:name, :username, :password, :role, :email, 1)
+        INSERT INTO users (name, username, password, role, email, grade_id, active)
+        VALUES (:name, :username, :password, :role, :email, :grade_id, 1)
     """), {
         "name": name,
         "username": username,
         "password": hashed_password,
         "role": role,
-        "email": email
+        "email": email,
+        "grade_id": grade_id
     })
     db.commit()
     
