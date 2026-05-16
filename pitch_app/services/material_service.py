@@ -97,7 +97,8 @@ def list_materials(
                 "path": f"/materials/{r.filename}",
             }
 
-            # Apply grade-based access control
+            # Apply grade-based access control. Admin callers pass None; regular
+            # users should pass their current grade level.
             if user_grade_level is not None and item["grau_minimo"] > user_grade_level:
                 continue
 
@@ -156,6 +157,29 @@ def get_material_by_id(db: Session, material_id: int) -> Optional[dict]:
     except Exception as e:
         logger.error(f"Error getting material {material_id}: {e}")
         return None
+
+
+def can_access_material(material: dict | None, user_grade_level: int | None) -> bool:
+    """Return whether a regular user can access a material for their grade."""
+    if not material:
+        return False
+    if user_grade_level is None:
+        return True
+    return int(material.get("grau_minimo") or 1) <= int(user_grade_level)
+
+
+def filter_accessible_filenames(
+    db: Session,
+    filenames: list[str],
+    user_grade_level: int | None,
+) -> list[str]:
+    """Keep only selected material filenames that the current grade may access."""
+    allowed: list[str] = []
+    for filename in filenames:
+        material = get_material_by_filename(db, filename)
+        if can_access_material(material, user_grade_level):
+            allowed.append(filename)
+    return allowed
 
 
 def get_material_by_filename(db: Session, filename: str) -> Optional[dict]:

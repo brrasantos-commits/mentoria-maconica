@@ -1138,6 +1138,7 @@ async def multi_upload_page(request: Request):
     _admin_only(request)
 
     industry_options, solution_options = _get_filter_options()
+    grades = [{"id": g.id, "name": g.name, "level": g.level} for g in _list_grades()]
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -1146,6 +1147,7 @@ async def multi_upload_page(request: Request):
             "request": request,
             "industry_options": industry_options,
             "solution_options": solution_options,
+            "grades": grades,
         },
     )
 
@@ -1229,6 +1231,7 @@ async def upload_single_file(
     title: str = Form(...),
     industry: str = Form(...),
     solution: str = Form(...),
+    grau_minimo: int = Form(1),
     description: str = Form(""),
 ):
     """Upload a single file (used by multi-upload)"""
@@ -1264,8 +1267,8 @@ async def upload_single_file(
     try:
         db.execute(
             text("""
-            INSERT INTO materials (title, filename, file_type, industry, solution, description, sort_order, active)
-            VALUES (:title, :filename, :file_type, :industry, :solution, :description, 0, 1)
+            INSERT INTO materials (title, filename, file_type, industry, solution, grau_minimo, description, sort_order, active)
+            VALUES (:title, :filename, :file_type, :industry, :solution, :grau_minimo, :description, 0, 1)
         """),
             {
                 "title": title.strip(),
@@ -1273,6 +1276,7 @@ async def upload_single_file(
                 "file_type": file_ext,
                 "industry": industry.strip(),
                 "solution": solution.strip(),
+                "grau_minimo": max(1, int(grau_minimo or 1)),
                 "description": description.strip() if description else "",
             },
         )

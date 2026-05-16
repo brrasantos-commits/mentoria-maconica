@@ -43,11 +43,14 @@
     </div>
 
     <div>
-      <label>Tipo de Usuário</label>
+      <label>Tipo de usuário</label>
       <select name="role" required>
         <option value="seller" {% if user and user.role == 'seller' %}selected{% endif %}>Mentorado</option>
         <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Administrador</option>
       </select>
+    </div>
+
+    <div>
       <label for="profile_id">Perfil de Acesso</label>
       <select id="profile_id" name="profile_id">
         <option value="">Sem perfil</option>
@@ -59,13 +62,20 @@
           </option>
         {% endfor %}
       </select>
+      <p class="meta-note">O perfil define quais módulos o usuário pode acessar.</p>
+    </div>
+
+    <div>
       <label for="grade_id">Grau do usuário</label>
       <select id="grade_id" name="grade_id">
-        <option value="">Sem grau</option>
+        <option value="">Sem grau definido (tratado como Aprendiz)</option>
         {% for grade in grades %}
-          <option value="{{ grade.id }}" {% if user and user.grade_id == grade.id %}selected{% endif %}>{{ grade.name }}</option>
+          <option value="{{ grade.id }}" {% if user and user.grade_id == grade.id %}selected{% endif %}>
+            {{ grade.name }} - permite materiais até o grau {{ grade.level }}
+          </option>
         {% endfor %}
       </select>
+      <p class="meta-note">Aprendiz vê grau 1; Companheiro vê graus 1 e 2; Mestre vê graus 1, 2 e 3.</p>
     </div>
 
     <label style="display:flex; gap:10px; align-items:center;">

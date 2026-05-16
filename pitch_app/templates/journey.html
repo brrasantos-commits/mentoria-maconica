@@ -32,6 +32,10 @@
 
   <div class="panel-card">
     <h3>Trilha recomendada</h3>
+    <p class="meta-note">
+      A trilha vem do grau vinculado ao usuário. Aprendiz recebe temas de grau 1;
+      Companheiro recebe grau 1 e 2; Mestre recebe grau 1, 2 e 3.
+    </p>
     <div class="materials-list">
       {% for topic in topics %}
         <article class="material-row">
@@ -41,6 +45,26 @@
           </div>
           <a class="secondary-btn" href="/mentor">Estudar com Mentor IA</a>
         </article>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel-card" style="margin-top:18px;">
+    <h3>Materiais recomendados para este grau</h3>
+    <p class="meta-note">
+      Recomendações geradas a partir dos materiais ativos cujo grau mínimo é permitido para {{ grade_name }}.
+    </p>
+    <div class="materials-list">
+      {% for material in recommended_materials %}
+        <article class="material-row">
+          <div class="material-main">
+            <strong>{{ material.title }}</strong>
+            <span>Grau mínimo: {{ material.grau_minimo }}{% if material.tema %} · Tema: {{ material.tema }}{% endif %}</span>
+          </div>
+          <a class="secondary-btn" href="/estudo/{{ material.id }}">Abrir material</a>
+        </article>
+      {% else %}
+        <p>Nenhum material ativo permitido para este grau foi encontrado.</p>
       {% endfor %}
     </div>
   </div>

@@ -31,7 +31,13 @@ from pitch_app.services.evaluation_service import evaluate_submission
 from pitch_app.services.exceptions import AppError
 from pitch_app.services.job_store import create_job, get_job, update_job
 from pitch_app.services.auth_service import authenticate_user, create_reset_token, reset_password_with_token
-from pitch_app.services.material_service import list_materials, get_material_by_id
+from pitch_app.services.material_service import (
+    can_access_material,
+    filter_accessible_filenames,
+    get_material_by_filename,
+    get_material_by_id,
+    list_materials,
+)
 from pitch_app.services.session_service import (
     get_selected_materials, set_selected_materials, add_selected_material,
     remove_selected_material, clear_selected_materials, is_user_logged,
@@ -326,6 +332,12 @@ def ensure_access_profiles_tables():
             text("SELECT id FROM access_profiles WHERE name = 'Mentorado'")
         ).scalar()
         if mentored_profile_id:
+            db.execute(text("""
+                UPDATE users
+                SET profile_id = :profile_id
+                WHERE role != 'admin' AND (profile_id IS NULL OR profile_id = '')
+            """), {"profile_id": mentored_profile_id})
+
             for feature in ["estudo", "chat_estudo", "mentor_ia", "roleplay", "pitch", "pranchas", "jornada", "historico"]:
                 exists = db.execute(text("""
                     SELECT 1 FROM access_profile_permissions
@@ -361,9 +373,51 @@ def ensure_grades_table():
         except Exception:
             pass
 
+        grade_items = [
+            ("Aprendiz", 1, "Grau inicial de estudo e instrução."),
+            ("Companheiro", 2, "Grau de aprofundamento simbólico e técnico."),
+            ("Mestre", 3, "Grau avançado de liderança e filosofia."),
+        ]
+        for name, level, description in grade_items:
+            db.execute(text("""
+                INSERT OR IGNORE INTO grades (name, level, description, active)
+                VALUES (:name, :level, :description, 1)
+            """), {"name": name, "level": level, "description": description})
+
+        db.execute(text("""
+            UPDATE users
+            SET grade_id = (SELECT id FROM grades WHERE name = 'Aprendiz')
+            WHERE role != 'admin' AND (grade_id IS NULL OR grade_id = '')
+        """))
+
         db.commit()
     finally:
         db.close()
+
+
+def get_current_user_grade_level(request: Request) -> int | None:
+    """Admin sees all. Regular users without grade fall back to Aprendiz."""
+    if request.session.get("user_role") == "admin":
+        return None
+
+    raw_level = request.session.get("user_grade_level")
+    try:
+        return max(1, int(raw_level or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def get_current_user_grade_name(request: Request) -> str:
+    if request.session.get("user_role") == "admin":
+        return "Administrador"
+    return request.session.get("user_grade_name") or "Aprendiz"
+
+
+def require_material_access(material: dict | None, request: Request) -> None:
+    if not material:
+        raise HTTPException(status_code=404, detail="Material não encontrado")
+    if not can_access_material(material, get_current_user_grade_level(request)):
+        raise HTTPException(status_code=403, detail="Acesso ao material restrito ao seu grau.")
 
 
 def seed_initial_data():
@@ -851,7 +905,8 @@ async def study_journey(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     user_id = request.session.get("user_id")
-    grade_name = request.session.get("user_grade_name") or "Aprendiz"
+    grade_name = get_current_user_grade_name(request)
+    user_grade_level = get_current_user_grade_level(request)
 
     board_count = db.execute(
         text("SELECT COUNT(*) FROM board_evaluations WHERE user_id = :user_id"),
@@ -861,13 +916,19 @@ async def study_journey(request: Request, db: Session = Depends(get_db)):
         text("SELECT COUNT(*) FROM pitch_evaluations WHERE user_id = :user_id"),
         {"user_id": user_id},
     ).scalar() or 0
-    selected_count = len(get_selected_materials(request))
+    selected_materials = filter_accessible_filenames(
+        db,
+        get_selected_materials(request),
+        user_grade_level,
+    )
+    selected_count = len(selected_materials)
 
     tracks = {
         "Aprendiz": ["Fundamentos", "Disciplina", "Pedra bruta", "Silêncio iniciático", "Símbolos básicos"],
-        "Companheiro": ["Construção", "Geometria", "Ciência", "Equilíbrio", "Trabalho e aperfeiçoamento"],
-        "Mestre": ["Liderança", "Transcendência", "Filosofia", "Aplicação prática", "Instrução de irmãos"],
+        "Companheiro": ["Revisão do Aprendiz", "Construção", "Geometria", "Ciência", "Equilíbrio", "Trabalho e aperfeiçoamento"],
+        "Mestre": ["Revisão do Aprendiz", "Revisão do Companheiro", "Liderança", "Transcendência", "Filosofia", "Aplicação prática", "Instrução de irmãos"],
     }
+    recommended_materials = list_materials(db, user_grade_level=user_grade_level)[:6]
 
     return templates.TemplateResponse(
         request,
@@ -875,7 +936,9 @@ async def study_journey(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "grade_name": grade_name,
+            "grade_level": user_grade_level,
             "topics": tracks.get(grade_name, tracks["Aprendiz"]),
+            "recommended_materials": recommended_materials,
             "board_count": board_count,
             "ritual_count": ritual_count,
             "selected_count": selected_count,
@@ -923,13 +986,18 @@ def user_has_permission(request: Request, feature: str):
 async def roleplay_api(
     request: Request,
     message: str = Form(...),
-    history: str = Form("")
+    history: str = Form(""),
+    db: Session = Depends(get_db),
 ):    
     import json
     from pitch_app.services.material_processing_service import get_material_text
     from pitch_app.services.config import MATERIALS_DIR
 
-    selected_materials = get_selected_materials(request)
+    selected_materials = filter_accessible_filenames(
+        db,
+        get_selected_materials(request),
+        get_current_user_grade_level(request),
+    )
 
     material_texts = {}
 
@@ -964,6 +1032,7 @@ async def study_chat_api(
     request: Request,
     message: str = Form(...),
     history: str = Form(""),
+    db: Session = Depends(get_db),
 ):
     import json
     from pitch_app.services.material_processing_service import get_material_text
@@ -972,7 +1041,11 @@ async def study_chat_api(
     if not is_user_logged(request):
         raise HTTPException(status_code=401, detail="Usuário não autenticado")
 
-    selected_materials = get_selected_materials(request)
+    selected_materials = filter_accessible_filenames(
+        db,
+        get_selected_materials(request),
+        get_current_user_grade_level(request),
+    )
     if not selected_materials:
         raise HTTPException(
             status_code=400,
@@ -1179,7 +1252,7 @@ async def study_index(
     if not user_has_permission(request, "estudo"):
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
-    user_grade_level = request.session.get("user_grade_level")
+    user_grade_level = get_current_user_grade_level(request)
     materials = list_materials(
         db,
         industry=industry,
@@ -1223,9 +1296,7 @@ async def study_material(
     if not material:
         raise HTTPException(status_code=404, detail="Material não encontrado")
 
-    user_grade_level = request.session.get("user_grade_level")
-    if user_grade_level is not None and material.get("grau_minimo", 1) > user_grade_level:
-        raise HTTPException(status_code=403, detail="Acesso ao material restrito ao seu grau.")
+    require_material_access(material, request)
 
     add_selected_material(request, material["filename"])
 
@@ -1324,7 +1395,11 @@ async def evaluate_board_page(
             status_code=400,
         )
 
-    selected_materials = get_selected_materials(request)
+    selected_materials = filter_accessible_filenames(
+        db,
+        get_selected_materials(request),
+        get_current_user_grade_level(request),
+    )
     material_texts: dict[str, str] = {}
     for filename in selected_materials:
         material_path = MATERIALS_DIR / filename
@@ -1334,7 +1409,7 @@ async def evaluate_board_page(
     result = evaluate_board(
         board_text=text_to_evaluate,
         material_texts=material_texts,
-        grade_name=request.session.get("user_grade_name") or "",
+        grade_name=get_current_user_grade_name(request),
     )
 
     row = db.execute(text("""
@@ -1398,7 +1473,7 @@ async def pitch_page(
     if not user_has_permission(request, "pitch"):
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
-    user_grade_level = request.session.get("user_grade_level")
+    user_grade_level = get_current_user_grade_level(request)
     materials = list_materials(db, user_grade_level=user_grade_level)
     filters = get_filter_options_db(db)
 
@@ -1485,6 +1560,14 @@ async def session_material_add(request: Request):
     if not filename:
         return JSONResponse(status_code=400, content={"detail": "filename obrigatório"})
 
+    db = SessionLocal()
+    try:
+        material = get_material_by_filename(db, filename)
+        if not can_access_material(material, get_current_user_grade_level(request)):
+            return JSONResponse(status_code=403, content={"detail": "Material restrito ao seu grau"})
+    finally:
+        db.close()
+
     materials = add_selected_material(request, filename)
     return JSONResponse({"materials": materials})
 
@@ -1517,6 +1600,16 @@ async def session_material_set(request: Request):
     if not isinstance(items, list):
         return JSONResponse(status_code=400, content={"detail": "materials deve ser lista"})
 
+    db = SessionLocal()
+    try:
+        items = filter_accessible_filenames(
+            db,
+            [str(item) for item in items],
+            get_current_user_grade_level(request),
+        )
+    finally:
+        db.close()
+
     materials = set_selected_materials(request, items)
     return JSONResponse({"materials": materials})
 
@@ -1548,6 +1641,7 @@ async def serve_material(
     
     if not material:
         raise HTTPException(status_code=404, detail="Material não encontrado")
+    require_material_access(material, request)
     
     # Serve material with download protection
     return get_secure_material_response(
@@ -1571,6 +1665,7 @@ async def study_pdf_viewer(
     
     if not material:
         raise HTTPException(status_code=404, detail="Material não encontrado")
+    require_material_access(material, request)
     
     if material["type"] != "pdf":
         # Redirect to regular viewer for non-PDF files
@@ -1612,6 +1707,19 @@ async def analyze(
     """Submit ritual reading for analysis"""
     if not is_user_logged(request):
         return _login_redirect()
+
+    db = SessionLocal()
+    try:
+        materials = filter_accessible_filenames(
+            db,
+            materials,
+            get_current_user_grade_level(request),
+        )
+    finally:
+        db.close()
+
+    if not materials:
+        raise HTTPException(status_code=400, detail="Selecione ao menos um material permitido para o seu grau.")
 
     _validate_video_upload(video, request)
 

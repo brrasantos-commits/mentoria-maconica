@@ -204,6 +204,7 @@
 <script>
   const INDUSTRY_OPTIONS = {{ industry_options | tojson }};
   const SOLUTION_OPTIONS = {{ solution_options | tojson }};
+  const GRADES = {{ grades | tojson }};
   
   let selectedFiles = [];
 
@@ -278,6 +279,12 @@
               ${SOLUTION_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
             </select>
           </div>
+          <div>
+            <label>Grau mínimo</label>
+            <select class="file-grade">
+              ${GRADES.map(grade => `<option value="${grade.level}">${grade.name}</option>`).join('')}
+            </select>
+          </div>
           <div style="grid-column: 1 / -1;">
             <label>Descrição</label>
             <textarea class="file-description" placeholder="Descrição do material (opcional)"></textarea>
@@ -347,6 +354,7 @@
       const title = fileItem.querySelector('.file-title').value.trim();
       const industry = fileItem.querySelector('.file-industry').value;
       const solution = fileItem.querySelector('.file-solution').value;
+      const grauMinimo = fileItem.querySelector('.file-grade').value || '1';
       const description = fileItem.querySelector('.file-description').value.trim();
       
       if (!title || !industry || !solution) {
@@ -360,6 +368,7 @@
       formData.append('title', title);
       formData.append('industry', industry);
       formData.append('solution', solution);
+      formData.append('grau_minimo', grauMinimo);
       formData.append('description', description);
       
       try {
