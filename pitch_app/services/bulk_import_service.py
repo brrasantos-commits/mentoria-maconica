@@ -29,8 +29,9 @@ def scan_materials_directory() -> List[Dict]:
         # Get file extension
         ext = file_path.suffix.lower().lstrip(".")
 
-        # Skip non-media files
-        if ext not in ["pdf", "mp4", "webm", "mov", "avi", "mkv"]:
+        # Skip unsupported study material files.
+        # Keep this list aligned with admin upload forms/routes.
+        if ext not in ["pdf", "docx", "txt", "mp3", "wav", "m4a", "mp4", "webm", "mov", "avi", "mkv"]:
             continue
 
         # Generate suggested title from filename
@@ -99,8 +100,14 @@ def extract_metadata_from_filename(filename: str) -> tuple[Optional[str], Option
     """
     filename_lower = filename.lower()
     
-    # Industry keywords
+    # Perfil/grau keywords
     industries = {
+        'aprendiz': 'Aprendiz',
+        'companheiro': 'Companheiro',
+        'mestre': 'Mestre',
+        'instrutor': 'Instrutor',
+        'administracao': 'Administração',
+        'administração': 'Administração',
         'varejo': 'Varejo',
         'retail': 'Varejo',
         'saude': 'Saúde',
@@ -120,8 +127,19 @@ def extract_metadata_from_filename(filename: str) -> tuple[Optional[str], Option
         'industry': 'Indústria'
     }
     
-    # Solution keywords
+    # Tipo de conteúdo keywords
     solutions = {
+        'ritual': 'Ritual',
+        'ritualistica': 'Ritualística',
+        'ritualística': 'Ritualística',
+        'instrucao': 'Instrução',
+        'instrução': 'Instrução',
+        'catecismo': 'Catecismo',
+        'simbologia': 'Simbologia',
+        'prancha': 'Prancha',
+        'historia': 'História',
+        'história': 'História',
+        'filosofia': 'Filosofia',
         'software': 'Software',
         'servicos': 'Serviços',
         'serviços': 'Serviços',
@@ -320,9 +338,11 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
                     """
                     INSERT INTO materials (
                         title, filename, file_type, industry, solution,
+                        rito, grau_minimo, tema, categoria,
                         description, sort_order, active
                     ) VALUES (
                         :title, :filename, :file_type, :industry, :solution,
+                        :rito, :grau_minimo, :tema, :categoria,
                         :description, :sort_order, 1
                     )
                     """
@@ -333,6 +353,10 @@ def bulk_import_materials(db: Session, materials: List[Dict]) -> Dict:
                     "file_type": material.get("file_type"),
                     "industry": (material.get("industry") or "").strip() or "Outros",
                     "solution": (material.get("solution") or "").strip() or "Geral",
+                    "rito": (material.get("rito") or "").strip(),
+                    "grau_minimo": int(material.get("grau_minimo") or 1),
+                    "tema": (material.get("tema") or "").strip(),
+                    "categoria": (material.get("categoria") or "").strip(),
                     "description": material.get("description", ""),
                     "sort_order": sort_order,
                 },

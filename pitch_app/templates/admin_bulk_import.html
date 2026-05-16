@@ -10,7 +10,7 @@
     <h3>Arraste e solte os arquivos aqui</h3>
     <p style="color:#6b7280;">ou clique para selecionar múltiplos arquivos</p>
 
-        <input id="fileInput" type="file" name="files" multiple accept=".pdf,.mp4,.webm,.mov,.avi,.mkv" style="display:none;">
+        <input id="fileInput" type="file" name="files" multiple accept=".pdf,.docx,.txt,.mp3,.wav,.m4a,.mp4,.webm,.mov,.avi,.mkv" style="display:none;">
 
 
     <div id="fileList" style="margin-top:12px; font-size:14px;"></div>
@@ -132,7 +132,7 @@
 
 
             <div>
-              <label for="industry_{{ loop.index }}">Indústria</label>
+              <label for="industry_{{ loop.index }}">Perfil / Grau</label>
                             <select id="industry_{{ loop.index }}" name="industry_{{ loop.index }}">
 
                 <option value="">Selecione...</option>
@@ -145,7 +145,7 @@
             </div>
 
             <div>
-              <label for="solution_{{ loop.index }}">Solução</label>
+              <label for="solution_{{ loop.index }}">Tipo de conteúdo</label>
                             <select id="solution_{{ loop.index }}" name="solution_{{ loop.index }}">
 
                 <option value="">Selecione...</option>
@@ -155,6 +155,50 @@
                 </option>
                 {% endfor %}
               </select>
+            </div>
+          </div>
+
+          <div class="form-row" style="gap:12px; margin-top:12px;">
+            <div>
+              <label for="rito_{{ loop.index }}">Rito</label>
+              <input
+                type="text"
+                id="rito_{{ loop.index }}"
+                name="rito_{{ loop.index }}"
+                placeholder="Ex.: Rito Escocês Antigo e Aceito"
+              >
+            </div>
+
+            <div>
+              <label for="grau_minimo_{{ loop.index }}">Grau mínimo</label>
+              <input
+                type="number"
+                id="grau_minimo_{{ loop.index }}"
+                name="grau_minimo_{{ loop.index }}"
+                value="1"
+                min="1"
+                step="1"
+              >
+            </div>
+
+            <div>
+              <label for="tema_{{ loop.index }}">Tema</label>
+              <input
+                type="text"
+                id="tema_{{ loop.index }}"
+                name="tema_{{ loop.index }}"
+                placeholder="Ex.: Inteligência Artificial"
+              >
+            </div>
+
+            <div>
+              <label for="categoria_{{ loop.index }}">Categoria</label>
+              <input
+                type="text"
+                id="categoria_{{ loop.index }}"
+                name="categoria_{{ loop.index }}"
+                placeholder="Ex.: Prancha"
+              >
             </div>
           </div>
 

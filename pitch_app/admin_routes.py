@@ -992,6 +992,10 @@ async def bulk_import_submit(request: Request):
         file_type = (form_data.get(f"file_type_{row_id}") or "").strip()
         industry = (form_data.get(f"industry_{row_id}") or "").strip()
         solution = (form_data.get(f"solution_{row_id}") or "").strip()
+        rito = (form_data.get(f"rito_{row_id}") or "").strip()
+        grau_minimo_raw = (form_data.get(f"grau_minimo_{row_id}") or "1").strip()
+        tema = (form_data.get(f"tema_{row_id}") or "").strip()
+        categoria = (form_data.get(f"categoria_{row_id}") or "").strip()
         description = (form_data.get(f"description_{row_id}") or "").strip()
         sort_order_raw = (form_data.get(f"sort_order_{row_id}") or "").strip()
 
@@ -1003,6 +1007,11 @@ async def bulk_import_submit(request: Request):
                 sort_order_value = None
 
         if title and file_type:
+            try:
+                grau_minimo = max(1, int(grau_minimo_raw or 1))
+            except Exception:
+                grau_minimo = 1
+
             materials.append(
                 {
                     "filename": filename,
@@ -1010,6 +1019,10 @@ async def bulk_import_submit(request: Request):
                     "file_type": file_type,
                     "industry": industry if industry else None,
                     "solution": solution if solution else None,
+                    "rito": rito,
+                    "grau_minimo": grau_minimo,
+                    "tema": tema,
+                    "categoria": categoria,
                     "description": description,
                     "sort_order": sort_order_value,
                 }
