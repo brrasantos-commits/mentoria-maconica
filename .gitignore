@@ -10,3 +10,5 @@ temp/
 logs/
 .idea/
 .vscode/
+pitch_app/materials/*.mp4
+pitch_app/materials/_processed/
