@@ -1,0 +1,67 @@
+{
+  "executive_summary": "O vídeo apresenta uma estratégia de vendas focada no setor de saúde utilizando a solução Huawei Fusion Cube, uma infraestrutura hiperconvergente que resolve as principais dores dos CIOs hospitalares, como downtime, altos custos de licenciamento e gestão complexa. Destaca-se a proposta de valor \"data center in a box\", com alta performance, eficiência e suporte local da Tecnocomp. O material também orienta sobre perguntas de discovery, tratamento de objeções e diferenciais competitivos para fechar negócios com clientes do setor de saúde.",
+  "key_topics": [
+    "TI na área da saúde",
+    "Dores dos CIOs hospitalares",
+    "Huawei Fusion Cube",
+    "Infraestrutura hiperconvergente",
+    "Proposta de valor \"data center in a box\"",
+    "Performance e eficiência",
+    "Ecossistema Tecnocomp e Huawei",
+    "Estratégia de vendas",
+    "Objeções e respostas",
+    "Comparativo com concorrentes",
+    "Próximos passos e CTA"
+  ],
+  "customer_pains": [
+    "Downtime que compromete a continuidade do cuidado ao paciente",
+    "Aumento exorbitante nos custos de licenciamento VMware (até 1.200%)",
+    "Gestão complexa de múltiplos sites e filiais sem visão centralizada"
+  ],
+  "value_proposition": [
+    "Infraestrutura hiperconvergente que entrega desempenho de data center com simplicidade de filial",
+    "Solução \"data center in a box\" pré-integrada com computação, armazenamento e rede",
+    "Arquitetura dual stack suportando VMs e containers nativamente",
+    "Alto desempenho com 100.000 IOPS por nó",
+    "Recuperação de dados rápida (rebuild de 1TB em 15 minutos)",
+    "Alta eficiência no uso de capacidade (91%)",
+    "Redução do TCO em 30% a 40%",
+    "Ausência do choque de licenciamento VMware"
+  ],
+  "technical_differentiators": [
+    "Família completa de infraestrutura para diferentes portes de clientes",
+    "Arquitetura dual stack para VMs e containers",
+    "Performance de 100.000 IOPS por nó",
+    "Rebuild de 1TB em 15 minutos, o mais rápido do mercado",
+    "Eficiência de 91% no uso da capacidade",
+    "Suporte local certificado N1, N2 e N3 pela Tecnocomp"
+  ],
+  "main_features": [
+    "Infraestrutura hiperconvergente pré-integrada (computação, armazenamento, rede)",
+    "Suporte a máquinas virtuais e containers na mesma plataforma",
+    "Alta performance para sistemas críticos como prontuário eletrônico e exames de imagem",
+    "Recuperação rápida de dados em caso de falha de disco",
+    "Alta eficiência que reduz custo total de propriedade"
+  ],
+  "services_mentioned": [
+    "Assessment e planejamento detalhado do ambiente do cliente",
+    "Instalação e configuração da solução",
+    "Criação de máquinas virtuais e preparação do ambiente para aplicações",
+    "Treinamento e documentação para equipe de TI do cliente",
+    "Suporte contínuo local com equipe certificada N1, N2 e N3"
+  ],
+  "cases_and_references": [
+    "Adoção da solução em setores críticos como saúde, governo e finanças, que demandam alta robustez e segurança"
+  ],
+  "recommended_pitch_points": [
+    "Iniciar com perguntas de discovery para entender dores e contexto do cliente",
+    "Destacar o impacto do downtime na continuidade do cuidado ao paciente",
+    "Enfatizar o choque de licenciamento VMware e como o Fusion Cube resolve isso",
+    "Apresentar a proposta de valor \"data center in a box\" e a arquitetura dual stack",
+    "Mostrar dados de performance e eficiência para justificar o valor",
+    "Reforçar o suporte local e a parceria Tecnocomp-Huawei",
+    "Preparar respostas para objeções comuns (custo, marca, ambiente legado)",
+    "Utilizar comparativo claro com concorrentes para evidenciar vantagens"
+  ],
+  "recommended_cta": "Agendar um diagnóstico gratuito do ambiente do cliente e solicitar uma simulação de TCO personalizada para demonstrar o valor financeiro da solução."
+}
