@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Prompts de IA | Admin{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Prompts de IA</h2>
+      <p>Atualize os comandos usados pela IA nos módulos da plataforma sem alterar o código.</p>
+    </div>
+    <div class="hero-pill">Governança da IA</div>
+  </div>
+
+  {% if saved %}
+    <div class="card-note" style="margin-bottom:16px; border-color:#86efac; background:#f0fdf4;">
+      Prompt salvo com sucesso.
+    </div>
+  {% endif %}
+
+  {% if reset %}
+    <div class="card-note" style="margin-bottom:16px; border-color:#bfdbfe; background:#eff6ff;">
+      Prompt restaurado para o padrão.
+    </div>
+  {% endif %}
+
+  <div class="card-note" style="margin-bottom:18px;">
+    Altere com cuidado: estes textos controlam limites, tom e critérios de avaliação da IA.
+    Para preservar a governança, mantenha instruções sobre uso de materiais autorizados, respeito ao grau e validação humana.
+  </div>
+
+  <div style="display:grid; gap:18px;">
+    {% for prompt in prompts %}
+      <article class="panel-card">
+        <div class="hero-block" style="margin-bottom:12px;">
+          <div>
+            <span class="material-badge">{{ prompt.module }}</span>
+            <h3 style="margin:10px 0 6px;">{{ prompt.title }}</h3>
+            <p class="meta-note">{{ prompt.description }}</p>
+            <p class="meta-note">Chave: <code>{{ prompt.key }}</code>{% if prompt.updated_at %} · Atualizado em {{ prompt.updated_at }}{% endif %}</p>
+          </div>
+          <form method="post" action="/admin/prompts/{{ prompt.key }}/reset">
+            <button class="secondary-btn" type="submit">Restaurar padrão</button>
+          </form>
+        </div>
+
+        <form method="post" action="/admin/prompts/{{ prompt.key }}/save" style="display:grid; gap:12px;">
+          <div>
+            <label for="prompt_{{ loop.index }}">Prompt</label>
+            <textarea
+              id="prompt_{{ loop.index }}"
+              name="prompt_text"
+              rows="14"
+              required
+              style="font-family:Consolas, monospace; line-height:1.45;"
+            >{{ prompt.prompt_text }}</textarea>
+          </div>
+
+          <label style="display:flex; gap:10px; align-items:center;">
+            <input type="checkbox" name="active" value="true" {% if prompt.active %}checked{% endif %}>
+            Usar este prompt personalizado
+          </label>
+
+          <details>
+            <summary class="secondary-btn" style="display:inline-flex; cursor:pointer;">Ver prompt padrão</summary>
+            <pre class="card-note" style="white-space:pre-wrap; margin-top:12px; font-family:Consolas, monospace;">{{ prompt.default_prompt }}</pre>
+          </details>
+
+          <div>
+            <button class="primary-btn" type="submit">Salvar prompt</button>
+          </div>
+        </form>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

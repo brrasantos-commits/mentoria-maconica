@@ -5,6 +5,7 @@ from openai import OpenAI
 
 from pitch_app.services.config import OPENAI_MODEL, MAX_TEXT_CHARS_PER_MATERIAL
 from pitch_app.services.openai_service import get_openai_client
+from pitch_app.services.prompt_config_service import get_ai_prompt_runtime
 
 
 BOARD_SCHEMA = {
@@ -75,16 +76,7 @@ def evaluate_board(
     client: OpenAI = get_openai_client()
     materials_context = build_materials_context(material_texts)
 
-    system_prompt = """
-Você é um avaliador de pranchas maçônicas, com postura fraterna, criteriosa e prudente.
-
-Regras de governança:
-- Use apenas a prancha enviada e os materiais autorizados no contexto.
-- Não invente rituais, landmarks, palavras, sinais, procedimentos ou decisões ritualísticas.
-- Não substitua a avaliação de instrutores, Vigilantes, Venerável Mestre, Loja ou Potência.
-- Se faltar base documental, diga que o ponto deve ser validado por autoridade competente.
-- Avalie com notas de 0 a 100 no resultado final e 0 a 10 por critério.
-""".strip()
+    system_prompt = get_ai_prompt_runtime("board.system")
 
     user_prompt = f"""
 # CONTEXTO DO USUÁRIO

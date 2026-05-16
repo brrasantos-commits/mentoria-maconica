@@ -38,6 +38,7 @@ FEATURES = [
     ("admin_usuarios", "Admin - Usuários"),
     ("admin_filtros", "Admin - Filtros"),
     ("admin_dashboard", "Admin - Dashboard"),
+    ("admin_prompts", "Admin - Prompts de IA"),
 ]
 
 
@@ -1125,6 +1126,73 @@ async def get_dashboard_daily(request: Request, service: str, days: int = 30):
         return {"success": True, "data": daily_data}
     finally:
         db.close()
+
+
+# ============================================================================
+# AI PROMPTS ROUTES
+# ============================================================================
+
+
+@router.get("/prompts", response_class=HTMLResponse)
+def admin_prompts(request: Request, saved: str = "", reset: str = ""):
+    _admin_only(request)
+
+    from pitch_app.services.prompt_config_service import list_ai_prompts
+
+    db = SessionLocal()
+    try:
+        prompts = list_ai_prompts(db)
+        db.commit()
+    finally:
+        db.close()
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "admin_prompts.html",
+        {
+            "request": request,
+            "prompts": prompts,
+            "saved": saved,
+            "reset": reset,
+        },
+    )
+
+
+@router.post("/prompts/{prompt_key}/save")
+def update_prompt(
+    request: Request,
+    prompt_key: str,
+    prompt_text: str = Form(...),
+    active: bool = Form(False),
+):
+    _admin_only(request)
+
+    from pitch_app.services.prompt_config_service import update_ai_prompt
+
+    db = SessionLocal()
+    try:
+        update_ai_prompt(db, prompt_key, prompt_text, active)
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/prompts?saved=1", status_code=303)
+
+
+@router.post("/prompts/{prompt_key}/reset")
+def reset_prompt(request: Request, prompt_key: str):
+    _admin_only(request)
+
+    from pitch_app.services.prompt_config_service import reset_ai_prompt
+
+    db = SessionLocal()
+    try:
+        reset_ai_prompt(db, prompt_key)
+        db.commit()
+    finally:
+        db.close()
+
+    return RedirectResponse(url="/admin/prompts?reset=1", status_code=303)
 
 
 # ============================================================================

@@ -5,6 +5,7 @@ from openai import OpenAI
 
 from pitch_app.services.openai_service import get_openai_client
 from pitch_app.services.config import OPENAI_MODEL
+from pitch_app.services.prompt_config_service import get_ai_prompt_runtime
 
 
 SYSTEM_PROMPT = """
@@ -59,7 +60,7 @@ def generate_study_chat_response(
 ) -> str:
     client: OpenAI = get_openai_client()
 
-    system_prompt = SYSTEM_PROMPT + _build_material_context(material_texts)
+    system_prompt = get_ai_prompt_runtime("study_chat.system") + _build_material_context(material_texts)
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(conversation)

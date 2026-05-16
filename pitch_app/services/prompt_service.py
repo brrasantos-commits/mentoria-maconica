@@ -1,6 +1,7 @@
 from typing import Any
 
 from pitch_app.services.config import MAX_TEXT_CHARS_PER_MATERIAL
+from pitch_app.services.prompt_config_service import get_ai_prompt_runtime
 
 SCORE_ITEM = {
     "type": "object",
@@ -74,7 +75,7 @@ def build_prompts(materials_text: str, transcript_text: str) -> tuple[str, str]:
 - Em "improvements", liste melhorias práticas e acionáveis.
 - Em "must_fix_first", liste os pontos prioritários.
 """.strip()
-    return DEVELOPER_PROMPT, user_prompt
+    return get_ai_prompt_runtime("ritual_evaluation.developer"), user_prompt
 
 
 def build_material_schema(material_names: list[str]) -> dict[str, Any]:

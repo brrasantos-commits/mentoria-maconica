@@ -47,6 +47,7 @@ from pitch_app.services.email_service import send_reset_email
 from pitch_app.services.pdf_service import generate_pdf_from_result
 from pitch_app.services.secure_material_service import get_secure_material_response
 from pitch_app.services.masonic_service import evaluate_board
+from pitch_app.services.prompt_config_service import ensure_ai_prompts_table as ensure_ai_prompts_table_for_db
 
 from pitch_app.services.config import (
     TEMPLATES_DIR,
@@ -80,6 +81,7 @@ async def lifespan(app: FastAPI):
     ensure_filtros_table()
     ensure_access_profiles_tables()
     ensure_grades_table()
+    ensure_ai_prompts_table()
 
     if os.getenv("SEED_ON_STARTUP", "").strip().lower() in {"1", "true", "yes"}:
         try:
@@ -390,6 +392,15 @@ def ensure_grades_table():
             WHERE role != 'admin' AND (grade_id IS NULL OR grade_id = '')
         """))
 
+        db.commit()
+    finally:
+        db.close()
+
+
+def ensure_ai_prompts_table():
+    db = SessionLocal()
+    try:
+        ensure_ai_prompts_table_for_db(db)
         db.commit()
     finally:
         db.close()

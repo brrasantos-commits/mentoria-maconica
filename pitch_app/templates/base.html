@@ -602,6 +602,7 @@
         {% if request.session.get("user_role") == "admin"
           or "admin_materiais" in session_permissions
           or "admin_filtros" in session_permissions
+          or "admin_prompts" in session_permissions
           or "painel_gestor" in session_permissions %}
 
         <div class="admin-menu">
@@ -629,6 +630,12 @@
               or "admin_filtros" in session_permissions %}
             <a class="{% if request.url.path.startswith('/admin/filtros') %}active{% endif %}"
               href="/admin/filtros">🧩 Filtros</a>
+            {% endif %}
+
+            {% if request.session.get("user_role") == "admin"
+              or "admin_prompts" in session_permissions %}
+            <a class="{% if request.url.path.startswith('/admin/prompts') %}active{% endif %}"
+              href="/admin/prompts">🧠 Prompts IA</a>
             {% endif %}
 
             {% if request.session.get("user_role") == "admin" %}
