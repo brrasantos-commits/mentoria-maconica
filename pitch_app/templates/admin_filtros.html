@@ -47,7 +47,15 @@
       <tbody>
         {% for filtro in filtros %}
         <tr>
-          <td>{{ filtro[1] }}</td>
+          <td>
+            {% if filtro[1] == "industria" %}
+              Perfil / Grau
+            {% elif filtro[1] == "solucao" %}
+              Tipo de conteúdo
+            {% else %}
+              {{ filtro[1] }}
+            {% endif %}
+          </td>
           <td>{{ filtro[2] }}</td>
           <td>{{ "Ativo" if filtro[3] else "Inativo" }}</td>
           <td style="display:flex; gap:8px; flex-wrap:wrap;">
