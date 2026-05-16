@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultado da Prancha | Mentoria Maçônica AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>{{ item.title }}</h2>
+      <p>Avaliação intelectual e ritualística assistida por IA.</p>
+    </div>
+    <div class="hero-pill">Nota {{ result.final_score }}</div>
+  </div>
+
+  <div class="panel-card" style="margin-bottom:16px;">
+    <strong>Resumo</strong>
+    <p style="margin-top:8px;">{{ result.summary }}</p>
+  </div>
+
+  <div class="materials-grid" style="margin-bottom:16px;">
+    {% for key, value in result.criteria.items() %}
+      <div class="material-card">
+        <div class="material-head">
+          <strong>{{ key.replace('_', ' ')|title }}</strong>
+          <span class="material-badge">{{ value }}/10</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="materials-grid">
+    <div class="panel-card">
+      <h3>Pontos fortes</h3>
+      <ul>
+        {% for item in result.strengths %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="panel-card">
+      <h3>Melhorias</h3>
+      <ul>
+        {% for item in result.improvements %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <section class="panel-card" style="margin-top:16px;">
+    <h3>Referências e estudos complementares</h3>
+    <ul>
+      {% for item in result.references %}
+        <li>{{ item }}</li>
+      {% endfor %}
+      {% for item in result.recommended_studies %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="panel-card" style="margin-top:16px;">
+    <h3>Estrutura sugerida</h3>
+    <pre style="white-space:pre-wrap;">{{ result.improved_outline }}</pre>
+  </section>
+</section>
+{% endblock %}

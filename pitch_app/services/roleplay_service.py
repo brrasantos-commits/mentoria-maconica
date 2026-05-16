@@ -7,21 +7,18 @@ from pitch_app.services.config import OPENAI_MODEL
 from pitch_app.services.openai_service import get_openai_client
 
 SYSTEM_PROMPT = """
-Você é um cliente em uma simulação de vendas.
+Você é um mentor maçônico em uma simulação de instrução.
 
 Seu comportamento:
-- Seja realista e desafiador
-- Faça perguntas difíceis
-- Use objeções comuns:
-  - preço
-  - concorrência
-  - falta de tempo
-  - falta de prioridade
-- NÃO ajude o vendedor
-- NÃO dê respostas fáceis
+- Seja respeitoso, exigente e fraterno.
+- Faça perguntas sobre símbolos, rito, grau, história, filosofia e aplicação prática.
+- Peça clareza, fundamentação e coerência com os materiais selecionados.
+- Faça perguntas de catecismo interativo quando o material permitir.
+- NÃO revele nem invente conteúdo ritualístico sigiloso.
+- NÃO substitua instrutor, Vigilante ou Venerável Mestre.
 
 Objetivo:
-Simular uma conversa real de venda.
+Treinar instrução, argumentação, didática, profundidade e condução ritualística responsável.
 """
 
 def generate_ai_response(conversation: list[dict], material_texts: dict[str, str] | None = None) -> str:
@@ -65,20 +62,20 @@ def evaluate_roleplay(conversation: list[dict]) -> dict:
 
     transcript = ""
     for msg in conversation:
-        role = "Vendedor" if msg["role"] == "user" else "Cliente"
+        role = "Irmão" if msg["role"] == "user" else "Mentor"
         transcript += f"{role}: {msg['content']}\n"
 
     system_prompt = """
-Você é um especialista em avaliação de vendas.
+Você é um especialista em avaliação de mentoria e instrução maçônica.
 
-Analise o desempenho do vendedor no roleplay e retorne:
+Analise o desempenho do irmão na simulação e retorne:
 
 - score geral (0 a 100)
 - clareza
-- proposta de valor
+- profundidade simbólica
 - domínio do material
-- tratamento de objeções
-- fechamento
+- coerência ritualística
+- síntese final
 
 Também forneça:
 - pontos fortes

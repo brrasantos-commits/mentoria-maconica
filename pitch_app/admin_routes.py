@@ -25,16 +25,19 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 FEATURES = [
-    ("estudo", "Estudo"),
-    ("chat_estudo", "Chat Estudo"),
-    ("roleplay", "Roleplay"),
-    ("pitch", "Pitch"),
-    ("historico", "Minha Evolução"),
+    ("estudo", "Biblioteca Ritualística"),
+    ("chat_estudo", "Chat Inteligente"),
+    ("mentor_ia", "Mentor IA"),
+    ("roleplay", "Simulações Ritualísticas"),
+    ("pitch", "Avaliação Ritualística por Voz"),
+    ("pranchas", "Avaliação de Pranchas"),
+    ("jornada", "Jornada de Estudos"),
+    ("historico", "Dashboard de Evolução"),
     ("painel_gestor", "Painel do Gestor"),
-    ("admin_materiais", "Admin — Materiais"),
-    ("admin_usuarios", "Admin — Usuários"),
-    ("admin_filtros", "Admin — Filtros"),
-    ("admin_dashboard", "Admin — Dashboard"),
+    ("admin_materiais", "Admin - Materiais"),
+    ("admin_usuarios", "Admin - Usuários"),
+    ("admin_filtros", "Admin - Filtros"),
+    ("admin_dashboard", "Admin - Dashboard"),
 ]
 
 

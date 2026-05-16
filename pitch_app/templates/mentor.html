@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Mentor IA | Mentoria Maçônica AI{% endblock %}
+
+{% block content %}
+<section class="page-card" style="max-width:900px; margin:auto;">
+  <div class="hero-block">
+    <div>
+      <h2>Mentor Maçônico Inteligente</h2>
+      <p>Converse com a IA usando somente os materiais autorizados selecionados na biblioteca.</p>
+    </div>
+    <div class="hero-pill">Governança ritualística ativa</div>
+  </div>
+
+  <div class="card-note" style="margin-bottom:14px;">
+    A IA apoia estudos, pranchas e reflexão filosófica. Ela não substitui instrutores, Vigilantes, Venerável Mestre, Loja ou Potência.
+  </div>
+
+  <div id="warning" class="card-note" style="display:none; background:#fff7ed; border-color:#fed7aa; color:#9a3412; margin-bottom:12px;">
+    Selecione pelo menos um material na <a href="/estudo">Biblioteca</a> antes de usar o Mentor IA.
+  </div>
+
+  <div class="panel-card" style="display:grid; gap:14px;">
+    <div>
+      <label for="depth">Profundidade da resposta</label>
+      <select id="depth">
+        <option value="didática">Didática</option>
+        <option value="ritualística">Ritualística</option>
+        <option value="filosófica">Filosófica</option>
+        <option value="comparativa">Comparativa</option>
+        <option value="aprofundada">Aprofundada</option>
+      </select>
+    </div>
+
+    <div id="chat" style="height:360px; overflow-y:auto; border:1px solid #e5e7eb; padding:16px; border-radius:14px; background:#fafafa; line-height:1.55;"></div>
+
+    <form id="mentorForm" style="display:flex; gap:10px;">
+      <input id="message" type="text" placeholder="Ex.: Quais materiais apoiam uma prancha sobre lapidação moral?" required style="flex:1;" disabled>
+      <button id="sendBtn" class="primary-btn" type="submit" disabled>Enviar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("message");
+  const sendBtn = document.getElementById("sendBtn");
+  const warning = document.getElementById("warning");
+  let history = [];
+
+  function addMessage(role, text) {
+    const div = document.createElement("div");
+    div.style.margin = "10px 0";
+    div.innerHTML = `<b>${role === "user" ? "Você" : "Mentor IA"}:</b> ${String(text || "").replace(/\n/g, "<br>")}`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function updateLock() {
+    const selected = typeof getSelectedMaterials === "function" ? getSelectedMaterials() : [];
+    const locked = !selected.length;
+    warning.style.display = locked ? "block" : "none";
+    input.disabled = locked;
+    sendBtn.disabled = locked;
+  }
+
+  addMessage("assistant", "Selecione materiais na Biblioteca e pergunte sobre símbolos, contexto, pranchas, instrução ou próximos estudos.");
+  updateLock();
+  window.addEventListener("materials-updated", updateLock);
+
+  document.getElementById("mentorForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const depth = document.getElementById("depth").value;
+    const message = `[Profundidade: ${depth}] ${input.value}`;
+    addMessage("user", input.value);
+    input.value = "";
+    sendBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append("message", message);
+    formData.append("history", JSON.stringify(history));
+    const response = await fetch("/api/study-chat", { method: "POST", body: formData, credentials: "same-origin" });
+    const data = await response.json();
+    history = data.history || history;
+    addMessage("assistant", data.response || data.detail || "Não consegui responder agora.");
+    sendBtn.disabled = false;
+    updateLock();
+  });
+</script>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Usuário | Sales Pitch AI{% endblock %}
+{% block title %}Usuário | Mentoria Maçônica AI{% endblock %}
 
 {% block content %}
 <section class="page-card" style="max-width:720px; margin:auto;">
@@ -45,7 +45,7 @@
     <div>
       <label>Tipo de Usuário</label>
       <select name="role" required>
-        <option value="seller" {% if user and user.role == 'seller' %}selected{% endif %}>Vendedor</option>
+        <option value="seller" {% if user and user.role == 'seller' %}selected{% endif %}>Mentorado</option>
         <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Administrador</option>
       </select>
       <label for="profile_id">Perfil de Acesso</label>

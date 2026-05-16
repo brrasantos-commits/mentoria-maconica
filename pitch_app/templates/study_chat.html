@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Chat de Estudo | Sales Pitch AI{% endblock %}
+{% block title %}Chat Inteligente | Mentoria Maçônica AI{% endblock %}
 
 {% block content %}
 <section class="page-card" style="max-width:900px; margin:auto;">
   <div class="hero-block">
     <div>
-      <h2>Chat com material de estudo selecionado</h2>
-      <p>Tire dúvidas sobre os materiais selecionados e transforme o conteúdo em argumentos práticos para seu pitch.</p>
+      <h2>Chat Inteligente com Materiais</h2>
+      <p>Converse com documentos, rituais, estudos e pranchas autorizados ao seu grau.</p>
     </div>
     <div class="hero-pill">Assistente de estudo</div>
   </div>
@@ -113,7 +113,7 @@
 
   addMessage(
     "assistant",
-    "Olá! Eu posso te ajudar a estudar os materiais selecionados. Pergunte qualquer coisa sobre conceitos, benefícios, diferenciais, casos de uso, e como aplicar no pitch. Sempre que possível, vou citar a fonte (nome do arquivo)."
+    "Olá. Eu posso te ajudar a estudar os materiais selecionados. Pergunte sobre símbolos, contexto histórico, rito, grau, filosofia, pranchas e estudos complementares. Sempre que possível, vou citar a fonte pelo nome do arquivo."
   );
 
   window.addEventListener("materials-updated", () => {

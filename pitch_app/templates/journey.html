@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Jornada de Estudos | Mentoria Maçônica AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Jornada de Estudos Personalizada</h2>
+      <p>Trilha sugerida para o grau {{ grade_name }}, combinando biblioteca, mentor IA, simulações e avaliações.</p>
+    </div>
+    <div class="hero-pill">{{ grade_name }}</div>
+  </div>
+
+  <div class="materials-grid" style="margin-bottom:18px;">
+    <div class="material-card">
+      <span class="material-badge">{{ selected_count }}</span>
+      <h3>Materiais em estudo</h3>
+      <p class="meta-note">Conteúdos selecionados na sessão atual.</p>
+    </div>
+    <div class="material-card">
+      <span class="material-badge">{{ ritual_count }}</span>
+      <h3>Avaliações ritualísticas</h3>
+      <p class="meta-note">Leituras e instruções enviadas para análise.</p>
+    </div>
+    <div class="material-card">
+      <span class="material-badge">{{ board_count }}</span>
+      <h3>Pranchas avaliadas</h3>
+      <p class="meta-note">Produção intelectual acompanhada pelo sistema.</p>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <h3>Trilha recomendada</h3>
+    <div class="materials-list">
+      {% for topic in topics %}
+        <article class="material-row">
+          <div class="material-main">
+            <strong>{{ topic }}</strong>
+            <span>Estudo, reflexão, simulação e produção de prancha.</span>
+          </div>
+          <a class="secondary-btn" href="/mentor">Estudar com Mentor IA</a>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

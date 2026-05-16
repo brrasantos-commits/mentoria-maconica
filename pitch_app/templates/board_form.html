@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Avaliação de Pranchas | Mentoria Maçônica AI{% endblock %}
+
+{% block content %}
+<section class="page-card">
+  <div class="hero-block">
+    <div>
+      <h2>Avaliação Inteligente de Pranchas</h2>
+      <p>Envie texto, PDF ou DOCX para receber comentários estruturados sobre forma, profundidade, simbolismo, clareza e aderência ritualística.</p>
+    </div>
+    <div class="hero-pill">Desenvolvimento intelectual</div>
+  </div>
+
+  {% if error %}
+    <div class="card-note" style="background:#fef2f2; border-color:#fecaca; color:#991b1b; margin-bottom:14px;">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/pranchas" enctype="multipart/form-data" class="panel-card" style="display:grid; gap:16px;">
+    <div>
+      <label for="title">Título da prancha</label>
+      <input id="title" name="title" type="text" placeholder="Ex.: A pedra bruta e a lapidação moral">
+    </div>
+
+    <div>
+      <label for="board_file">Arquivo da prancha</label>
+      <input id="board_file" name="board_file" type="file" accept=".txt,.pdf,.docx">
+      <div class="hint" style="margin-top:6px;">Formatos aceitos: TXT, PDF e DOCX.</div>
+    </div>
+
+    <div>
+      <label for="board_text">Ou cole o texto da prancha</label>
+      <textarea id="board_text" name="board_text" rows="12" placeholder="Cole aqui o conteúdo para avaliação."></textarea>
+    </div>
+
+    <div class="card-note">
+      A avaliação usa os materiais selecionados na Biblioteca como referência autorizada. Materiais selecionados: {{ selected_materials|length }}.
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary-btn" type="submit">Avaliar prancha</button>
+      <a class="secondary-btn" href="/estudo">Selecionar materiais</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

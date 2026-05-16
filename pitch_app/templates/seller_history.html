@@ -1,18 +1,35 @@
 {% extends 'base.html' %}
 
-{% block title %}Minha Evolução | Sales Pitch AI{% endblock %}
+{% block title %}Dashboard | Mentoria Maçônica AI{% endblock %}
 
 {% block content %}
 <section class="page-card">
   <div class="hero-block">
     <div>
-      <h2>Minha Evolução</h2>
-      <p>Acompanhe seu histórico de avaliações e evolução de performance.</p>
+      <h2>Dashboard de Evolução</h2>
+      <p>Acompanhe avaliações ritualísticas, pranchas e progresso individual de estudos.</p>
     </div>
-    <div class="hero-pill">Histórico do vendedor</div>
+    <div class="hero-pill">Evolução do irmão</div>
   </div>
 
+  {% if board_evaluations %}
+    <h3>Pranchas avaliadas</h3>
+    <div class="materials-grid" style="margin-bottom:22px;">
+      {% for item in board_evaluations %}
+      <article class="material-card">
+        <div class="material-head">
+          <span class="material-badge">Nota {{ item.final_score }}</span>
+        </div>
+        <h3>{{ item.title }}</h3>
+        <p class="meta-note"><strong>Data:</strong> {{ item.created_at }}</p>
+        <a class="primary-btn" href="/pranchas/resultado/{{ item.id }}">Ver resultado</a>
+      </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   {% if evaluations %}
+    <h3>Avaliações ritualísticas</h3>
     <div class="materials-grid">
       {% for item in evaluations %}
       <article class="material-card">
@@ -32,7 +49,7 @@
     </div>
   {% else %}
     <div class="empty-state">
-      Você ainda não possui avaliações registradas.
+      Você ainda não possui avaliações ritualísticas registradas.
     </div>
   {% endif %}
 </section>

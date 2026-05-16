@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Pitch | Sales Pitch AI{% endblock %}
+{% block title %}Avaliação Ritualística | Mentoria Maçônica AI{% endblock %}
 
 {% block content %}
 <section class="page-card">
   <div class="hero-block">
     <div>
-      <h2>Etapa 2 — Envio do pitch</h2>
-      <p>Revise os materiais estudados, filtre o que faz sentido para este pitch e envie o vídeo para análise.</p>
+      <h2>Avaliação Ritualística por Voz</h2>
+      <p>Envie leitura, catecismo, instrução, abertura, fechamento ou apresentação oral para transcrição e avaliação assistida por IA.</p>
     </div>
     <div class="hero-pill">Seleção centralizada na sessão</div>
   </div>
@@ -17,7 +17,7 @@
       style="display:grid; gap:18px;"
       onsubmit="
         if (!document.querySelectorAll('.pitch-material-checkbox:checked').length) {
-          alert('Selecione pelo menos um material de apoio antes de enviar para análise.');
+          alert('Selecione pelo menos um material ritualístico/de estudo antes de enviar para análise.');
           return false;
         }
 
@@ -34,18 +34,18 @@
       ">
         <div class="form-row">
       <div>
-        <label for="seller_name_display">Vendedor (usuário logado)</label>
+        <label for="seller_name_display">Irmão avaliado</label>
         <input
           type="text"
           id="seller_name_display"
           value="{{ request.session.get('user_name', '') }}"
           readonly
         >
-        <div class="hint" style="margin-top:6px;">O pitch será salvo automaticamente no seu usuário.</div>
+        <div class="hint" style="margin-top:6px;">A avaliação será salva automaticamente no seu histórico.</div>
       </div>
 
       <div>
-        <label for="video">Vídeo do pitch</label>
+        <label for="video">Vídeo da leitura ou instrução</label>
         <input type="file" id="video" name="video" accept="video/*" required>
       </div>
     </div>
@@ -80,20 +80,20 @@
 
       <div class="filter-grid" style="margin-bottom:14px;">
         <div>
-          <label for="pitchFilterIndustry">Filtrar por indústria</label>
+          <label for="pitchFilterIndustry">Filtrar por perfil/grau</label>
           <select id="pitchFilterIndustry">
             <option value="all">Todas</option>
-            {% for option in industry_options %}
+            {% for option in filters.industria %}
               <option value="{{ option }}">{{ option }}</option>
             {% endfor %}
           </select>
         </div>
 
         <div>
-          <label for="pitchFilterSolution">Filtrar por solução</label>
+          <label for="pitchFilterSolution">Filtrar por tipo de conteúdo</label>
           <select id="pitchFilterSolution">
             <option value="all">Todas</option>
-            {% for option in solution_options %}
+            {% for option in filters.solucao %}
               <option value="{{ option }}">{{ option }}</option>
             {% endfor %}
           </select>
@@ -101,7 +101,7 @@
 
         <div>
           <label for="pitchSearch">Buscar material</label>
-          <input type="text" id="pitchSearch" placeholder="Buscar por título, arquivo, indústria ou solução">
+          <input type="text" id="pitchSearch" placeholder="Buscar por título, arquivo, grau, rito, tema ou tipo">
         </div>
       </div>
 
@@ -136,7 +136,7 @@
 
           <div class="material-main">
             <strong>{{ material.title }}</strong>
-            <span>{{ material.industry or 'Sem indústria' }} • {{ material.solution or 'Sem solução' }} • {{ material.type|upper }}</span>
+            <span>{{ material.industry or 'Sem grau' }} • {{ material.solution or 'Sem tipo' }} • {{ material.rito or 'Sem rito' }} • {{ material.type|upper }}</span>
             <small>{{ material.filename }}</small>
           </div>
         </label>

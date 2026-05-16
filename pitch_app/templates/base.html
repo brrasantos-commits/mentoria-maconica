@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Sales Pitch AI{% endblock %}</title>
+  <title>{% block title %}Mentoria Maçônica AI{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <style>
     :root {
@@ -12,9 +12,9 @@
       --card: #ffffff;
       --text: #1f2937;
       --muted: #6b7280;
-      --primary: #4f46e5;
-      --primary-strong: #4338ca;
-      --primary-soft: #eef2ff;
+      --primary: #8a5a2b;
+      --primary-strong: #5f3b18;
+      --primary-soft: #fff7ed;
       --line: #e5e7eb;
       --danger: #dc2626;
       --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
@@ -29,9 +29,7 @@
       margin: 0;
       font-family: Inter, Arial, sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(79, 70, 229, .08), transparent 28%),
-        linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
+      background: linear-gradient(180deg, #fdfcf9 0%, var(--bg) 100%);
     }
 
     .container {
@@ -553,8 +551,8 @@
   <main class="container">
     <header class="site-header">
       <div class="site-brand">
-        <h1>Sales Pitch AI</h1>
-        <p>Treinamento comercial, estudo de materiais, envio de pitch e gestão administrativa.</p>
+        <h1>Mentoria Maçônica AI</h1>
+        <p>Biblioteca ritualística, mentor IA, pranchas, simulações e evolução por grau.</p>
       </div>
 
       
@@ -565,27 +563,38 @@
 
       <nav class="site-nav">
         <a class="nav-link {% if request.url.path.startswith('/estudo') %}active{% endif %}" href="/estudo">
-        Estudo
+        Biblioteca
         </a>
 
                 {% if request.session.get("user_role") == "admin" or "chat_estudo" in session_permissions %}
         <a class="nav-link {% if request.url.path.startswith('/chat-estudo') %}active{% endif %}" href="/chat-estudo">
-        Chat Estudo
+        Chat
         </a>
         {% endif %}
 
+        <a class="nav-link {% if request.url.path.startswith('/mentor') %}active{% endif %}" href="/mentor">
+        Mentor IA
+        </a>
 
         <a class="nav-link {% if request.url.path.startswith('/roleplay') %}active{% endif %}" href="/roleplay">
-        Roleplay
+        Simulação
         </a>
 
         <a class="nav-link {% if request.url.path.startswith('/pitch') %}active{% endif %}" href="/pitch">
-        Pitch
+        Ritualística
         </a>
 
-        <a class="nav-link {% if request.url.path.startswith('/vendedor/historico') %}active{% endif %}"
-            href="/vendedor/historico">
-          Minha Evolução
+        <a class="nav-link {% if request.url.path.startswith('/pranchas') %}active{% endif %}" href="/pranchas">
+        Pranchas
+        </a>
+
+        <a class="nav-link {% if request.url.path.startswith('/jornada') %}active{% endif %}" href="/jornada">
+        Jornada
+        </a>
+
+        <a class="nav-link {% if request.url.path.startswith('/dashboard') or request.url.path.startswith('/vendedor/historico') %}active{% endif %}"
+            href="/dashboard">
+          Dashboard
         </a>
 
         

@@ -40,12 +40,14 @@ from pitch_app.services.session_service import (
 from pitch_app.services.email_service import send_reset_email
 from pitch_app.services.pdf_service import generate_pdf_from_result
 from pitch_app.services.secure_material_service import get_secure_material_response
+from pitch_app.services.masonic_service import evaluate_board
 
 from pitch_app.services.config import (
     TEMPLATES_DIR,
     STATIC_DIR,
     MATERIALS_DIR,
     MAX_VIDEO_SIZE_MB,
+    UPLOAD_DIR,
 )
 
 # Configure logging
@@ -67,6 +69,7 @@ async def lifespan(app: FastAPI):
     migrate_db()
     ensure_user_permissions_table()
     ensure_pitch_evaluations_table()
+    ensure_board_evaluations_table()
     
     ensure_filtros_table()
     ensure_access_profiles_tables()
@@ -85,7 +88,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application...")
 
 app = FastAPI(
-    title="Sales Pitch AI V4",
+    title="Mentoria Maçônica AI",
     lifespan=lifespan
 )
 
@@ -141,17 +144,18 @@ def ensure_filtros_table():
         count = db.execute(text("SELECT COUNT(*) FROM filtros_config")).scalar()
         if count == 0:
             initial_filters = [
-                ("industria", "Varejo"),
-                ("industria", "Saúde"),
-                ("industria", "Finanças"),
-                ("industria", "Tecnologia"),
-                ("industria", "Educação"),
-                ("industria", "Indústria"),
-                ("solucao", "Software"),
-                ("solucao", "Serviços"),
-                ("solucao", "Consultoria"),
-                ("solucao", "Hardware"),
-                ("solucao", "Plataforma"),
+                ("industria", "Aprendiz"),
+                ("industria", "Companheiro"),
+                ("industria", "Mestre"),
+                ("industria", "Instrutor"),
+                ("industria", "Administração"),
+                ("solucao", "Ritual"),
+                ("solucao", "Instrução"),
+                ("solucao", "Catecismo"),
+                ("solucao", "Simbologia"),
+                ("solucao", "Prancha"),
+                ("solucao", "História"),
+                ("solucao", "Filosofia"),
             ]
             for tipo, valor in initial_filters:
                 db.execute(text("""
@@ -241,6 +245,25 @@ def ensure_pitch_evaluations_table():
         db.commit()
     finally:
         db.close()
+
+
+def ensure_board_evaluations_table():
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS board_evaluations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                title VARCHAR(255),
+                source_name VARCHAR(255),
+                final_score INTEGER,
+                full_result TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    finally:
+        db.close()
         
 def ensure_user_permissions_table():
     db = SessionLocal()
@@ -288,6 +311,32 @@ def ensure_access_profiles_tables():
         except Exception:
             pass
 
+        db.execute(text("""
+            UPDATE access_profiles
+            SET name = 'Mentorado', description = 'Perfil padrão de estudo maçônico'
+            WHERE name = 'Vendedor'
+        """))
+
+        db.execute(text("""
+            INSERT OR IGNORE INTO access_profiles (name, description, active)
+            VALUES ('Mentorado', 'Perfil padrão de estudo maçônico', 1)
+        """))
+
+        mentored_profile_id = db.execute(
+            text("SELECT id FROM access_profiles WHERE name = 'Mentorado'")
+        ).scalar()
+        if mentored_profile_id:
+            for feature in ["estudo", "chat_estudo", "mentor_ia", "roleplay", "pitch", "pranchas", "jornada", "historico"]:
+                exists = db.execute(text("""
+                    SELECT 1 FROM access_profile_permissions
+                    WHERE profile_id = :profile_id AND feature = :feature
+                """), {"profile_id": mentored_profile_id, "feature": feature}).fetchone()
+                if not exists:
+                    db.execute(text("""
+                        INSERT INTO access_profile_permissions (profile_id, feature, enabled)
+                        VALUES (:profile_id, :feature, 1)
+                    """), {"profile_id": mentored_profile_id, "feature": feature})
+
         db.commit()
     finally:
         db.close()
@@ -333,7 +382,7 @@ def seed_initial_data():
                 VALUES (:name, :description, 1)
                 """
             ),
-            {"name": "Vendedor", "description": "Perfil padrão de vendedor"},
+            {"name": "Mentorado", "description": "Perfil padrão de estudo maçônico"},
         )
         db.execute(
             text(
@@ -346,14 +395,23 @@ def seed_initial_data():
         )
 
         seller_profile_id = db.execute(
-            text("SELECT id FROM access_profiles WHERE name = 'Vendedor'")
+            text("SELECT id FROM access_profiles WHERE name = 'Mentorado'")
         ).scalar()
         manager_profile_id = db.execute(
             text("SELECT id FROM access_profiles WHERE name = 'Gestor'")
         ).scalar()
 
                 # Permissions for seller
-        seller_features = ["estudo", "chat_estudo", "roleplay", "pitch", "historico"]
+        seller_features = [
+            "estudo",
+            "chat_estudo",
+            "mentor_ia",
+            "roleplay",
+            "pitch",
+            "pranchas",
+            "jornada",
+            "historico",
+        ]
 
         for feature in seller_features:
             db.execute(
@@ -539,7 +597,7 @@ def seed_initial_data():
 def _validate_video_upload(video: UploadFile, request: Request):
     """Validate video upload with optimized size check"""
     if not video or not video.filename:
-        raise HTTPException(status_code=400, detail="Vídeo do pitch é obrigatório.")
+        raise HTTPException(status_code=400, detail="Vídeo da leitura ritualística é obrigatório.")
 
     # Check content-length header first (more efficient)
     content_length = request.headers.get("content-length")
@@ -608,7 +666,7 @@ def _run_analysis_job(
     video_bytes: bytes,
     materials: list[str],
 ):
-    """Background task to run pitch analysis"""
+    """Background task to run ritualistic video analysis"""
     try:
         fake_upload = SimpleNamespace(
             filename=video_filename,
@@ -661,7 +719,7 @@ def _run_analysis_job(
                 "Libere espaço no volume (/app/data) ou aumente o volume no Railway."
             )
         else:
-            message = "Erro interno ao analisar o pitch. Tente novamente."
+            message = "Erro interno ao analisar a avaliação ritualística. Tente novamente."
 
         update_job(
             job_id,
@@ -766,9 +824,73 @@ async def study_chat_page(request: Request):
     )
 
 
+@app.get("/mentor", response_class=HTMLResponse)
+async def mentor_page(request: Request):
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    if not user_has_permission(request, "mentor_ia"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
+    return templates.TemplateResponse(
+        request,
+        "mentor.html",
+        {
+            "request": request,
+            "selected_materials": get_selected_materials(request),
+        },
+    )
+
+
+@app.get("/jornada", response_class=HTMLResponse)
+async def study_journey(request: Request, db: Session = Depends(get_db)):
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    if not user_has_permission(request, "jornada"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
+    user_id = request.session.get("user_id")
+    grade_name = request.session.get("user_grade_name") or "Aprendiz"
+
+    board_count = db.execute(
+        text("SELECT COUNT(*) FROM board_evaluations WHERE user_id = :user_id"),
+        {"user_id": user_id},
+    ).scalar() or 0
+    ritual_count = db.execute(
+        text("SELECT COUNT(*) FROM pitch_evaluations WHERE user_id = :user_id"),
+        {"user_id": user_id},
+    ).scalar() or 0
+    selected_count = len(get_selected_materials(request))
+
+    tracks = {
+        "Aprendiz": ["Fundamentos", "Disciplina", "Pedra bruta", "Silêncio iniciático", "Símbolos básicos"],
+        "Companheiro": ["Construção", "Geometria", "Ciência", "Equilíbrio", "Trabalho e aperfeiçoamento"],
+        "Mestre": ["Liderança", "Transcendência", "Filosofia", "Aplicação prática", "Instrução de irmãos"],
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "journey.html",
+        {
+            "request": request,
+            "grade_name": grade_name,
+            "topics": tracks.get(grade_name, tracks["Aprendiz"]),
+            "board_count": board_count,
+            "ritual_count": ritual_count,
+            "selected_count": selected_count,
+        },
+    )
+
+
 def user_has_permission(request: Request, feature: str):
 
     if request.session.get("user_role") == "admin":
+        return True
+
+    # Backward compatibility for users/profiles created before the masonic
+    # modules existed. Material access is still restricted by grade.
+    if feature in {"mentor_ia", "pranchas", "jornada", "historico"} and request.session.get("user_logged"):
         return True
 
     user_id = request.session.get("user_id")
@@ -1125,11 +1247,143 @@ async def study_material(
 
 @app.post("/estudo/concluir")
 async def study_complete(request: Request):
-    """Complete study phase and redirect to pitch"""
+    """Complete study phase and redirect to ritual evaluation"""
     if not is_user_logged(request):
         return _login_redirect()
 
     return RedirectResponse(url="/pitch", status_code=303)
+
+
+@app.get("/pranchas", response_class=HTMLResponse)
+async def board_page(request: Request):
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    if not user_has_permission(request, "pranchas"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
+    return templates.TemplateResponse(
+        request,
+        "board_form.html",
+        {
+            "request": request,
+            "selected_materials": get_selected_materials(request),
+        },
+    )
+
+
+@app.post("/pranchas", response_class=HTMLResponse)
+async def evaluate_board_page(
+    request: Request,
+    title: str = Form(""),
+    board_text: str = Form(""),
+    board_file: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+):
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    if not user_has_permission(request, "pranchas"):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
+    from pitch_app.services.file_service import extract_text, sanitize_name
+    from pitch_app.services.material_processing_service import get_material_text
+
+    source_name = ""
+    text_to_evaluate = (board_text or "").strip()
+
+    if board_file and board_file.filename:
+        ext = Path(board_file.filename).suffix.lower()
+        if ext not in {".txt", ".pdf", ".docx"}:
+            return templates.TemplateResponse(
+                request,
+                "board_form.html",
+                {
+                    "request": request,
+                    "selected_materials": get_selected_materials(request),
+                    "error": "Envie a prancha em TXT, PDF ou DOCX.",
+                },
+                status_code=400,
+            )
+        source_name = board_file.filename
+        temp_path = UPLOAD_DIR / "boards" / f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{sanitize_name(board_file.filename)}"
+        temp_path.parent.mkdir(parents=True, exist_ok=True)
+        with temp_path.open("wb") as buffer:
+            shutil.copyfileobj(board_file.file, buffer)
+        text_to_evaluate = extract_text(temp_path)
+
+    if len(text_to_evaluate.strip()) < 80:
+        return templates.TemplateResponse(
+            request,
+            "board_form.html",
+            {
+                "request": request,
+                "selected_materials": get_selected_materials(request),
+                "error": "Informe uma prancha com conteúdo suficiente para avaliação.",
+            },
+            status_code=400,
+        )
+
+    selected_materials = get_selected_materials(request)
+    material_texts: dict[str, str] = {}
+    for filename in selected_materials:
+        material_path = MATERIALS_DIR / filename
+        if material_path.exists():
+            material_texts[filename] = get_material_text(material_path)
+
+    result = evaluate_board(
+        board_text=text_to_evaluate,
+        material_texts=material_texts,
+        grade_name=request.session.get("user_grade_name") or "",
+    )
+
+    row = db.execute(text("""
+        INSERT INTO board_evaluations (user_id, title, source_name, final_score, full_result)
+        VALUES (:user_id, :title, :source_name, :final_score, :full_result)
+    """), {
+        "user_id": request.session.get("user_id"),
+        "title": (title or "Prancha sem título").strip(),
+        "source_name": source_name,
+        "final_score": int(result.get("final_score") or 0),
+        "full_result": json.dumps(result, ensure_ascii=False),
+    })
+    db.commit()
+    board_id = row.lastrowid
+
+    return RedirectResponse(url=f"/pranchas/resultado/{board_id}", status_code=303)
+
+
+@app.get("/pranchas/resultado/{board_id}", response_class=HTMLResponse)
+async def board_result(request: Request, board_id: int, db: Session = Depends(get_db)):
+    if not is_user_logged(request):
+        return _login_redirect()
+
+    row = db.execute(text("""
+        SELECT id, title, source_name, final_score, full_result, created_at
+        FROM board_evaluations
+        WHERE id = :id AND user_id = :user_id
+    """), {"id": board_id, "user_id": request.session.get("user_id")}).fetchone()
+
+    if not row and request.session.get("user_role") == "admin":
+        row = db.execute(text("""
+            SELECT id, title, source_name, final_score, full_result, created_at
+            FROM board_evaluations
+            WHERE id = :id
+        """), {"id": board_id}).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Avaliação de prancha não encontrada")
+
+    result = json.loads(row.full_result or "{}")
+    return templates.TemplateResponse(
+        request,
+        "board_result.html",
+        {
+            "request": request,
+            "item": row,
+            "result": result,
+        },
+    )
 
 
 @app.get("/pitch", response_class=HTMLResponse)
@@ -1187,6 +1441,13 @@ async def seller_history(request: Request, db: Session = Depends(get_db)):
         {"user_id": user_id, "seller_name": seller_name},
     ).fetchall()
 
+    board_rows = db.execute(text("""
+        SELECT id, title, source_name, final_score, created_at
+        FROM board_evaluations
+        WHERE user_id = :user_id
+        ORDER BY created_at DESC
+    """), {"user_id": user_id}).fetchall()
+
 
     return templates.TemplateResponse(
         request,
@@ -1194,8 +1455,14 @@ async def seller_history(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "evaluations": rows,
+            "board_evaluations": board_rows,
         },
     )
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def user_dashboard(request: Request, db: Session = Depends(get_db)):
+    return await seller_history(request, db)
 
 @app.get("/api/session/materials")
 async def session_materials(request: Request):
@@ -1342,7 +1609,7 @@ async def analyze(
     video: UploadFile = File(...),
     materials: list[str] = Form(...),
 ):
-    """Submit pitch for analysis"""
+    """Submit ritual reading for analysis"""
     if not is_user_logged(request):
         return _login_redirect()
 
@@ -1352,7 +1619,7 @@ async def analyze(
     seller_name = (request.session.get("user_name") or "").strip()
 
     if not seller_name:
-        seller_name = "Vendedor"
+        seller_name = "Mentorado"
 
     video_bytes = await video.read()
     video_filename = video.filename or "video.mp4"
@@ -1473,7 +1740,7 @@ async def download_result_pdf(request: Request, job_id: str):
         )
 
         # Return PDF as download
-        filename = f"resultado_pitch_{result.get('seller_name', 'vendedor')}_{job_id[:8]}.pdf"
+        filename = f"resultado_ritualistica_{result.get('seller_name', 'mentorado')}_{job_id[:8]}.pdf"
         
         return Response(
             content=pdf_bytes,

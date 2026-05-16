@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Materiais Admin | Sales Pitch AI{% endblock %}
+{% block title %}Materiais Admin | Mentoria Maçônica AI{% endblock %}
 
 {% block content %}
 <section class="page-card">
   <div class="hero-block">
     <div>
       <h2>Gestão de materiais</h2>
-      <p>Gerencie o catálogo de conteúdos exibidos nas jornadas de estudo e pitch, mantendo a organização por indústria, solução, ordem e status de processamento.</p>
+      <p>Gerencie o catálogo de rituais, instruções, catecismos, pranchas, vídeos e documentos históricos.</p>
     </div>
     <div class="hero-pill">Administração de conteúdo</div>
   </div>
@@ -30,7 +30,7 @@
   <form method="get" action="/admin/materials" class="panel-card" style="display:grid; gap:14px; margin-bottom:18px;">
     <div class="filter-grid">
       <div>
-        <label for="industry">Indústria</label>
+        <label for="industry">Perfil / Grau</label>
         <select id="industry" name="industry">
           <option value="all">Todas</option>
           {% for option in industry_options %}
@@ -40,7 +40,7 @@
       </div>
 
       <div>
-        <label for="solution">Solução</label>
+        <label for="solution">Tipo de conteúdo</label>
         <select id="solution" name="solution">
           <option value="all">Todas</option>
           {% for option in solution_options %}
@@ -118,8 +118,8 @@
 
         <div>
           <h3 style="margin:0 0 8px; font-size:20px;">{{ material.title }}</h3>
-          <p class="meta-note"><strong>Indústria:</strong> {{ material.industry }}</p>
-          <p class="meta-note"><strong>Solução:</strong> {{ material.solution }}</p>
+          <p class="meta-note"><strong>Perfil/Grau:</strong> {{ material.industry }}</p>
+          <p class="meta-note"><strong>Tipo:</strong> {{ material.solution }}</p>
           <p class="file-name">Arquivo: {{ material.filename }}</p>
         </div>
 
@@ -167,7 +167,7 @@
           {% if is_video %}
             <p style="margin:12px 0 0; color:#475569; line-height:1.6;">
               {% if material.has_transcript and material.has_ai_summary %}
-                Este vídeo já está pronto para ser usado como material base enriquecido na análise do pitch.
+                Este vídeo já está pronto para ser usado como material base enriquecido em consultas, pranchas e avaliações.
               {% elif material.has_transcript and not material.has_ai_summary %}
                 A transcrição foi gerada, mas o resumo com IA ainda não está disponível.
               {% elif not material.has_transcript and material.has_ai_summary %}
