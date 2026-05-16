@@ -166,7 +166,7 @@
     <h3 style="margin: 0 0 8px;">Clique para selecionar arquivos</h3>
     <p style="margin: 0; color: #6b7280;">ou arraste e solte arquivos aqui</p>
     <p style="margin: 12px 0 0; font-size: 13px; color: #9ca3af;">
-      Suporta: PDF, MP4, WEBM, MOV, AVI, MKV
+      Suporta: PDF, DOCX, TXT, MP3, WAV, M4A, MP4, WEBM, MOV, AVI, MKV
     </p>
   </div>
 
@@ -174,7 +174,7 @@
     type="file" 
     id="fileInput" 
     multiple 
-    accept=".pdf,.mp4,.webm,.mov,.avi,.mkv"
+    accept=".pdf,.docx,.txt,.mp3,.wav,.m4a,.mp4,.webm,.mov,.avi,.mkv"
     class="hidden"
     onchange="handleFiles(this.files)"
   >
@@ -265,14 +265,14 @@
             <input type="text" class="file-title" value="${title}" placeholder="Título do material">
           </div>
           <div>
-            <label>Indústria</label>
+            <label>Perfil / Grau</label>
             <select class="file-industry">
               <option value="">Selecione...</option>
               ${INDUSTRY_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label>Solução</label>
+            <label>Tipo de conteúdo</label>
             <select class="file-solution">
               <option value="">Selecione...</option>
               ${SOLUTION_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
@@ -295,6 +295,11 @@
   function getFileIcon(ext) {
     const icons = {
       'pdf': '📄',
+      'docx': '📄',
+      'txt': '📄',
+      'mp3': '🎧',
+      'wav': '🎧',
+      'm4a': '🎧',
       'mp4': '🎬',
       'webm': '🎬',
       'mov': '🎬',

@@ -1223,9 +1223,11 @@ async def upload_single_file(
 
     # Validate file type
     file_ext = Path(file.filename or "").suffix.lower().lstrip(".")
-    if file_ext not in ["pdf", "mp4", "webm", "mov", "avi", "mkv"]:
+    allowed_exts = ["pdf", "docx", "txt", "mp3", "wav", "m4a", "mp4", "webm", "mov", "avi", "mkv"]
+    if file_ext not in allowed_exts:
         raise HTTPException(
-            status_code=400, detail=f"Tipo de arquivo não suportado: {file_ext}"
+            status_code=400,
+            detail=f"Tipo de arquivo não suportado: {file_ext}. Use: {', '.join(allowed_exts)}.",
         )
 
     # Save file
